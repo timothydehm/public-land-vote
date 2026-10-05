@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Public Land Voting Tool</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='11' height='11' fill='%23E4E1EA'/%3E%3Crect x='17' y='4' width='11' height='11' fill='%239184A8'/%3E%3Crect x='4' y='17' width='11' height='11' fill='%23625579'/%3E%3Crect x='17' y='17' width='11' height='11' fill='%232E2742'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="preconnect" href="https://services3.arcgis.com" crossorigin>
+<style>
+:root{
+  --ink:#1D1A26; --muted:#67646C; --line:#DCDAD6; --mist:#F3F2F0; --paper:#FFFFFF;
+  --r1:#E4E1EA; --r2:#BDB5CC; --r3:#9184A8; --r4:#625579; --r5:#2E2742;
+  --ok:#1E7A5F; --danger:#9E2F2A;
+  --font:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-card:16px; --r-ctl:11px;
+  --shadow:0 1px 2px rgba(29,26,38,.07), 0 10px 30px rgba(29,26,38,.11);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--mist);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body.on-map{overflow:hidden;height:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45em;min-height:44px;padding:0 16px;border-radius:var(--r-ctl);
+  border:1.5px solid var(--line);background:var(--paper);font-weight:600;font-size:15px;white-space:nowrap;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:#bbb8b2}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn-quiet{border-color:transparent;background:transparent;padding:0 10px}
+.btn-quiet:hover{background:var(--mist)}
+.btn-sm{min-height:36px;font-size:14px;padding:0 12px}
+.btn-block{width:100%}
+.link{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font-size:inherit;cursor:pointer}
+.icon-btn{width:44px;height:44px;border-radius:var(--r-ctl);border:0;background:transparent;display:inline-grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--mist)}
+.icon-btn svg{width:22px;height:22px}
+input.text,select,textarea{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:var(--r-ctl);padding:0 12px;background:var(--paper)}
+textarea{padding:11px 12px;min-height:84px;resize:vertical;line-height:1.4}
+input.text:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+.code-input{text-transform:uppercase;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;background:var(--mist);border-radius:var(--r-ctl);padding:3px}
+.seg button{border:0;background:transparent;min-height:34px;padding:0 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(29,26,38,.12)}
+
+/* ---------- pages (home, new map, codes) ---------- */
+.page{max-width:720px;margin:0 auto;padding:28px 18px 60px}
+.page h1{font-size:26px;letter-spacing:-.015em;margin:0 0 6px}
+.page h2{font-size:18px;margin:30px 0 10px;letter-spacing:-.005em}
+.page p{margin:0 0 10px}
+.lead{font-size:16.5px;color:var(--muted);max-width:60ch}
+.panel{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:18px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.join{display:flex;gap:8px;margin-top:4px}
+.join input{flex:1;min-width:0}
+.form-msg{color:var(--danger);font-size:14px;margin-top:6px}
+.maps{display:grid;gap:10px}
+.map-row{display:block;text-decoration:none;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:15px 17px}
+.map-row:hover{box-shadow:0 1px 2px rgba(29,26,38,.1),0 12px 34px rgba(29,26,38,.16)}
+.map-row .q{font-weight:650;font-size:16.5px;line-height:1.3}
+.map-row .meta{font-size:13.5px;color:var(--muted);margin-top:4px}
+.empty{color:var(--muted);font-size:15px;padding:6px 0}
+.field{margin-top:16px}
+.field label{display:block;font-weight:600;font-size:14.5px;margin-bottom:5px}
+.field .hint{font-size:13.5px;color:var(--muted);margin-top:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.check input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:var(--ink)}
+.key-box{background:var(--mist);border-radius:var(--r-ctl);padding:12px 14px;margin:10px 0}
+.key-box b{display:block;font-size:20px;letter-spacing:-.005em}
+table.codes{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:8px}
+table.codes th{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1.5px solid var(--line)}
+table.codes td{padding:7px 8px;border-bottom:1px solid var(--mist)}
+table.codes td.code{font-variant-numeric:tabular-nums;letter-spacing:.05em;font-weight:600}
+.tools{margin-top:40px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.tools .link{font-weight:550;color:var(--muted)}
+.back{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:600;text-decoration:none;color:var(--muted);margin-bottom:14px}
+
+/* invite cards, for printing */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:14px}
+.invite{border:1.5px dashed #c3c0ba;border-radius:12px;padding:14px;background:#fff;break-inside:avoid}
+.invite .iq{font-weight:650;font-size:14.5px;line-height:1.3}
+.invite .ic{font-size:22px;font-weight:700;letter-spacing:.07em;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.invite .it{font-size:12.5px;color:var(--muted);line-height:1.4;word-break:break-all}
+.invite .qr{width:96px;height:96px;margin-top:8px}
+.invite .qr svg{width:100%;height:100%;display:block}
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  .page{max-width:none;padding:0}
+  .cards{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ---------- the map view ---------- */
+#map{position:fixed;inset:0;background:#EFEFED}
+.maplibregl-ctrl-attrib{font-size:10.5px}
+.head{position:fixed;z-index:10;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;right:12px;max-width:420px;background:var(--paper);
+  border-radius:var(--r-card);box-shadow:var(--shadow);padding:11px 14px 11px}
+.head .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.head .back{margin:0;font-size:13px}
+.head h1{margin:3px 0 0;font-size:17px;line-height:1.3;font-weight:700;letter-spacing:-.01em}
+.terms{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:5px;font-size:12.8px;color:var(--muted)}
+.terms b{color:var(--ink);font-weight:650}
+.head .ctl{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap}
+.legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend .ramp{display:flex;gap:2px}
+.legend .ramp i{width:20px;height:9px;border-radius:2px;display:block}
+.legend i.none{width:11px;height:11px;border-radius:2px;border:1px solid rgba(29,26,38,.2);background:#fff;display:inline-block}
+.legend i.mine{width:11px;height:11px;border-radius:2px;background:var(--ink);display:inline-block;box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px var(--ink)}
+.head .dl{font-size:12.5px;margin-top:6px;color:var(--muted)}
+.head .dl .link{font-weight:550;color:var(--muted)}
+
+.member{position:fixed;z-index:10;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);max-width:420px;background:var(--paper);
+  border-radius:var(--r-card);box-shadow:var(--shadow);padding:11px 12px 11px 14px;font-size:14px}
+.member .who{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.member .who b{font-size:15px}
+.budget{display:flex;gap:4px;margin-top:6px}
+.budget i{flex:1;height:7px;border-radius:4px;background:var(--r5)}
+.budget i.left{background:var(--mist);box-shadow:inset 0 0 0 1px var(--line)}
+.locate{position:fixed;z-index:9;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);width:46px;height:46px;border-radius:50%;border:0;background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center}
+.locate svg{width:22px;height:22px}
+@media (max-width:899px){.locate{bottom:calc(env(safe-area-inset-bottom,0px) + 20px + var(--member-h,96px) + 10px)}}
+@media (min-width:900px){.head,.member{left:20px}.head{top:20px}.member{bottom:28px}.locate{right:20px;bottom:28px}}
+
+/* the parcel card */
+.card{position:fixed;z-index:20;left:0;right:0;bottom:0;max-height:78vh;max-height:78dvh;overflow:auto;background:var(--paper);border-radius:20px 20px 0 0;
+  box-shadow:0 -10px 40px rgba(29,26,38,.18);padding:6px 18px calc(env(safe-area-inset-bottom,0px) + 20px)}
+@media (max-width:899px){
+  .card{max-height:56vh;max-height:56dvh}
+  /* with a lot open, the top card shrinks to the question so more of the map shows */
+  body.card-open .head .top, body.card-open .head .terms, body.card-open .head .ctl, body.card-open .head .legend{display:none}
+  body.card-open .head h1{margin:0;font-size:15px}
+  body.card-open .locate, body.card-open .member{visibility:hidden}
+}
+@media (min-width:900px){.card{left:auto;right:20px;top:20px;bottom:28px;width:390px;max-height:none;border-radius:var(--r-card);box-shadow:var(--shadow)}}
+.card .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 6px}
+@media (min-width:900px){.card .grab{display:none}}
+.card .ch{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.card h2{margin:6px 0 0;font-size:19px;line-height:1.25;letter-spacing:-.01em}
+.card .pin{font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.card h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 6px;font-weight:600}
+.tallyline{display:flex;align-items:center;gap:10px;font-size:15px}
+.swatch{width:22px;height:22px;border-radius:5px;flex:none;border:1px solid rgba(29,26,38,.15)}
+.vote-msg{font-size:13.5px;color:var(--muted);margin-top:7px}
+.voted{font-weight:650;font-size:15px;margin-bottom:8px}
+.vote-msg.bad{color:var(--danger)}
+dl.city{display:grid;grid-template-columns:minmax(120px,42%) 1fr;gap:6px 12px;margin:0;font-size:14px}
+dl.city dt{color:var(--muted)}
+dl.city dd{margin:0;word-break:break-word}
+dl.city dd.blank{color:#a19da6;font-style:italic}
+.others a{display:block;text-decoration:none;padding:9px 0;border-top:1px solid var(--mist);font-size:14.5px}
+.others a:first-child{border-top:0}
+.others .oq{font-weight:600;line-height:1.3}
+.others .on{font-size:13px;color:var(--muted)}
+
+/* list view */
+.list{position:fixed;z-index:8;inset:0;background:var(--mist);overflow:auto;padding:var(--list-top,190px) 12px 130px}
+@media (min-width:900px){.list{left:460px;padding:20px 20px 40px}}
+.list-inner{max-width:640px;margin:0 auto}
+.list .bar{display:flex;gap:8px;position:sticky;top:0;padding:8px 0;background:var(--mist);z-index:1}
+.list .bar input{flex:1}
+.list .bar select{width:auto}
+.lot{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--paper);border:0;border-radius:12px;padding:11px 13px;margin-top:6px;box-shadow:0 1px 2px rgba(29,26,38,.06)}
+.lot .ll{font-weight:600;font-size:15px;line-height:1.3}
+.lot .lp{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lot .lv{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;flex:none}
+.list .more{font-size:13.5px;color:var(--muted);text-align:center;padding:14px}
+
+/* toast */
+.toast{position:fixed;z-index:800;left:50%;transform:translate(-50%,10px);opacity:0;pointer-events:none;max-width:min(420px,calc(100% - 24px));width:max-content;
+  background:var(--ink);color:#fff;border-radius:12px;padding:11px 16px;font-size:14.5px;line-height:1.3;box-shadow:0 8px 24px rgba(29,26,38,.25);
+  transition:opacity .18s,transform .18s;top:calc(env(safe-area-inset-top,0px) + 14px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.error{background:var(--danger)}
+
+.boot{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.boot b{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
+.boot .err{color:var(--danger);margin-top:8px;word-break:break-word}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="map" hidden aria-label="Map of the city's land bank lots"></div>
+<div id="app"><div class="boot"><div><b>Public Land Voting Tool</b>Loading…</div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+/* =========================================================================
+   Public Land Voting Tool
+
+   Maps, invite codes, and votes live in the shared database (Supabase,
+   see schema.sql), reached only through its pv_* functions. Add ?prototype
+   to the address to use a private copy kept in this browser instead, with
+   sample maps and tools for trying changes without touching the record.
+
+   The lots are the City of Cleveland's land bank inventory, read live from
+   its open data portal (and kept in the browser until the city edits it).
+   ========================================================================= */
+const CONFIG = {
+  place: "Cleveland",
+  parcelsUrl: "https://services3.arcgis.com/dty2kHktVXHrqO8i/arcgis/rest/services/City_Landbank/FeatureServer/0",
+  idField: "parcelpin", addressField: "par_addr_all",
+  basemap: "https://tiles.openfreemap.org/styles/positron",
+  onsiteMeters: 100,         // on-site maps: a vote counts only within this distance of the lot
+  listLimit: 200,            // rows shown at once in the list view
+  refreshSeconds: 20,        // how often an open map picks up other people's votes
+  // The shared record. The publishable key is meant to be public; the database only allows the pv_* functions.
+  supabaseUrl: "https://gftqwwxmtkjipnixuwif.supabase.co",
+  supabaseKey: "sb_publishable_qsEiLPwrqJY_dD5u7X15fQ_oR-S8WI4"
+};
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
+const QR_JS = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+const PROTOTYPE = new URLSearchParams(location.search).has("prototype") || !CONFIG.supabaseUrl || !CONFIG.supabaseKey;
+const RAMP = ["#E4E1EA", "#BDB5CC", "#9184A8", "#625579", "#2E2742"];   // more agreement, darker
+const WORDS = `acorn alder amber anchor apple arbor ash aspen aster autumn badger barley basil bay beach beacon bear beaver beech bell bench berry birch bison bloom bluff boat bramble branch breeze brick bridge brook bud burrow cabin canal canopy cardinal cedar chalk cherry chestnut chimney cider clay cloud clover coast cobalt comet copper coral corn cove coyote crane creek cricket crow cypress daisy dawn deer delta dew dove dune dusk eagle earth elm ember falcon fennel fern field finch fir firefly flint fog forest fox frog frost garden gate ginger glade glen goose granite grape grass grove gull harbor hare harvest hawk hazel heath hedge heron hickory hill hollow honey ibis iris ivy jade jay juniper kale kestrel lake lamp lane lantern larch lark laurel leaf lemon lilac lily lime linden lynx maple marsh meadow melon mill mink mint mist moon moss moth nest newt nutmeg oak oat ocean olive orchard oriole osprey otter owl pansy park path peach pear pebble pepper pier pine plaza plum pond poplar poppy porch prairie quail quarry rabbit rain raven reed ridge river robin rock rose rowan rye sage salt sand sapling sedge seed shore sky slate snow sorrel sparrow spring spruce square squirrel stone stork storm stream summer sun swallow swan sycamore teal tern thistle thyme tide timber toad tower trail trout tulip turtle valley violet walnut warbler wave whale wheat willow wind winter wolf wren yarrow`.split(/\s+/);
+
+/* ------------------------------------------------------------- utilities */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => new Intl.NumberFormat().format(n);
+const plural = (n, one, many) => `${fmt(n)} ${n === 1 ? one : many}`;
+const normId = v => String(v ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+const displayId = id => /^\d{8}$/.test(id) ? `${id.slice(0, 3)}-${id.slice(3, 5)}-${id.slice(5)}` : id;
+const normCode = v => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const showCode = c => c.length === 8 ? `${c.slice(0, 4)}-${c.slice(4)}` : c;
+function randInt(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+const ALPH = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const randStr = n => Array.from({ length: n }, () => ALPH[randInt(ALPH.length)]).join("");
+function threeWords() { const s = new Set(); while (s.size < 3) s.add(WORDS[randInt(WORDS.length)]); return [...s].join(" "); }
+const normKey = k => String(k || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const ls = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+function downloadFile(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+const csv = rows => rows.map(r => r.map(csvCell).join(",")).join("\n") + "\n";
+function fmtDate(d) { return new Date(d).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }); }
+let toastTimer = 0;
+function toast(text, { error = false, ms = 3800 } = {}) {
+  const el = $("#toast"); el.textContent = text; el.classList.toggle("error", error);
+  el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+function metersBetween(a, b) {   // [lng, lat] pairs
+  const R = 6371000, r = x => x * Math.PI / 180, dLat = r(b[1] - a[1]), dLng = r(b[0] - a[0]);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[1])) * Math.cos(r(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+const ERR = {
+  code_not_found: "That code isn't on any map. Check it and try again.",
+  not_member: "Enter this map's invite code to vote.",
+  budget_used: "You've used all your votes. Take one back to vote here.",
+  off_site: "This map counts votes only at the lot.",
+  bad_key: "That steward key doesn't match this map. Each map has its own key, shown once when the map was made.",
+  map_not_found: "There's no map here.",
+  parcel_not_found: "This lot isn't in the record yet. The city may have just added it; try again in an hour.",
+  bad_question: "Write a question of up to 200 characters.",
+  bad_budget: "Votes per member must be between 1 and 100.",
+  bad_members: "That's too many codes at once.",
+  too_many_attempts: "Too many tries from this network. Wait a few minutes and try again.",
+  network: "Couldn't reach the record. Check the connection and try again."
+};
+const errText = e => { const m = String(e?.message || e || ""); return ERR[m] || (/fetch|network|Failed|timeout|load failed/i.test(m) ? ERR.network : m || "Something went wrong."); };
+function loadScript(src) { return new Promise((ok, no) => document.head.appendChild(Object.assign(document.createElement("script"), { src, onload: ok, onerror: () => no(new Error("network")) }))); }
+
+/* =====================================================================
+   Store: everything people do. In this prototype it's one record kept in
+   this browser. The functions match what the shared database will offer.
+   ===================================================================== */
+const DB_KEY = "plvt:prototype:v1";
+const LocalStore = (() => {
+  const empty = () => ({ maps: {}, codes: {}, votes: {}, history: [] });
+  // votes: "map|parcel|member" -> { at, onsite }
+  let db = ls.get(DB_KEY) || empty();
+  const save = () => { if (!ls.set(DB_KEY, db)) toast("This browser couldn't save. Is it in private mode?", { error: true }); };
+  const mapOr404 = id => { const m = db.maps[id]; if (!m) throw new Error("map_not_found"); return m; };
+  const codesOf = id => Object.entries(db.codes).filter(([, c]) => c.map === id);
+  const votesOf = id => Object.entries(db.votes).filter(([k]) => k.startsWith(id + "|")).map(([k, v]) => { const [, parcel, member] = k.split("|"); return { parcel, member: +member, ...v }; });
+  const stats = id => {
+    const codes = codesOf(id), votes = votesOf(id);
+    return { issued: codes.length, used: codes.filter(([, c]) => c.used_at).length, votes: votes.length, lots: new Set(votes.map(v => v.parcel)).size };
+  };
+  const pub = m => ({ id: m.id, question: m.question, steward: m.steward, budget: m.budget, onsite: m.onsite, created_at: m.created_at, ...stats(m.id) });
+  const newCodes = (m, n) => { const out = []; for (let i = 0; i < n; i++) { let c; do c = randStr(8); while (db.codes[c]); db.codes[c] = { map: m.id, member: ++m.members, used_at: null }; out.push(c); } return out; };
+  return {
+    async maps() { return Object.values(db.maps).map(pub).sort((a, b) => b.created_at.localeCompare(a.created_at)); },
+    async map(id) { return pub(mapOr404(id)); },
+    async create({ question, steward, budget, members, onsite }) {
+      let id; do id = randStr(6).toLowerCase(); while (db.maps[id]);
+      const key = threeWords();
+      const m = db.maps[id] = { id, question, steward, budget, onsite, created_at: new Date().toISOString(), key: normKey(key), members: 0 };
+      const codes = newCodes(m, members); save();
+      return { map: pub(m), key, codes };
+    },
+    async codes(id, key) {
+      const m = mapOr404(id); if (normKey(key) !== m.key) throw new Error("bad_key");
+      return codesOf(id).map(([code, c]) => ({ code, member: c.member, used_at: c.used_at })).sort((a, b) => a.member - b.member);
+    },
+    async findByKey(key) { return Object.values(db.maps).filter(m => m.key === normKey(key)).map(m => m.id); },
+    async addCodes(id, key, n) { const m = mapOr404(id); if (normKey(key) !== m.key) throw new Error("bad_key"); const c = newCodes(m, n); save(); return c; },
+    async join(code) { const c = db.codes[normCode(code)]; if (!c) throw new Error("code_not_found"); return { map: c.map, member: c.member }; },
+    async vote(code, parcel, onsite) {
+      const c = db.codes[normCode(code)]; if (!c) throw new Error("not_member");
+      const m = mapOr404(c.map), k = `${m.id}|${parcel}|${c.member}`;
+      if (db.votes[k]) return;
+      if (votesOf(m.id).filter(v => v.member === c.member).length >= m.budget) throw new Error("budget_used");
+      if (m.onsite && !onsite) throw new Error("off_site");
+      const at = new Date().toISOString();
+      db.votes[k] = { at, onsite: m.onsite ? !!onsite : null };
+      c.used_at ||= at;
+      db.history.push({ map: m.id, parcel, member: c.member, action: "vote", at, onsite: m.onsite ? !!onsite : null });
+      save();
+    },
+    async unvote(code, parcel) {
+      const c = db.codes[normCode(code)]; if (!c) throw new Error("not_member");
+      const k = `${c.map}|${parcel}|${c.member}`; if (!db.votes[k]) return;
+      delete db.votes[k];
+      db.history.push({ map: c.map, parcel, member: c.member, action: "take back", at: new Date().toISOString(), onsite: null });
+      save();
+    },
+    async tally(id) { const counts = new Map(); for (const v of votesOf(id)) counts.set(v.parcel, (counts.get(v.parcel) || 0) + 1); return counts; },
+    async mine(code) { const c = db.codes[normCode(code)]; if (!c) return new Set(); return new Set(votesOf(c.map).filter(v => v.member === c.member).map(v => v.parcel)); },
+    async lotMaps(parcel) {
+      const by = new Map();
+      for (const k of Object.keys(db.votes)) { const [map, p] = k.split("|"); if (p === parcel) by.set(map, (by.get(map) || 0) + 1); }
+      return [...by].filter(([id]) => db.maps[id]).map(([id, n]) => ({ id, question: db.maps[id].question, steward: db.maps[id].steward, votes: n })).sort((a, b) => b.votes - a.votes);
+    },
+    async record(id) {   // every current vote, for download
+      const ids = id ? [id] : Object.keys(db.maps);
+      return ids.flatMap(mid => votesOf(mid).map(v => ({ map: mid, question: db.maps[mid].question, ...v })));
+    },
+    async history(id) { return db.history.filter(h => !id || h.map === id); },
+    // prototype only
+    exportAll() { return JSON.stringify(db, null, 1); },
+    importAll(text) { const d = JSON.parse(text); if (!d || !d.maps || !d.codes || !d.votes) throw new Error("That file isn't a saved record."); db = { history: [], ...d }; save(); },
+    reset() { db = empty(); save(); }
+  };
+})();
+
+// The shared record: the same functions, as calls to the database.
+let sbc = null;
+const sb = () => sbc || (sbc = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } }));
+async function rpc(fn, args) {
+  const { data, error } = await sb().rpc(fn, args || {});
+  if (error) throw new Error(/fetch/i.test(error.message || "") ? "network" : error.message || "unknown");
+  if (data && !Array.isArray(data) && data.error) throw new Error(data.error);
+  return data;
+}
+const RemoteStore = {
+  maps: () => rpc("pv_list_maps"),
+  map: id => rpc("pv_get_map", { p_id: id }),
+  create: ({ question, steward, budget, members, onsite }) => rpc("pv_create_map", { p_question: question, p_steward: steward, p_budget: budget, p_members: members, p_onsite: onsite }),
+  codes: (id, key) => rpc("pv_codes", { p_map: id, p_key: key }),
+  addCodes: (id, key, n) => rpc("pv_add_codes", { p_map: id, p_key: key, p_n: n }),
+  findByKey: key => rpc("pv_find_by_key", { p_key: key }),
+  join: code => rpc("pv_join", { p_code: code }),
+  vote: (code, parcel, onsite) => rpc("pv_vote", { p_code: code, p_parcel: parcel, p_onsite: onsite }),
+  unvote: (code, parcel) => rpc("pv_unvote", { p_code: code, p_parcel: parcel }),
+  async tally(id) { return new Map(await rpc("pv_tally", { p_map: id })); },
+  async mine(code) { return new Set(await rpc("pv_mine", { p_code: code })); },
+  lotMaps: parcel => rpc("pv_lot_maps", { p_parcel: parcel }),
+  record: id => rpc("pv_record", { p_map: id || null })
+};
+const Store = PROTOTYPE ? LocalStore : RemoteStore;
+
+// Which codes this device has entered: map id -> code
+const CODES_KEY = PROTOTYPE ? "plvt:my-codes" : "plvt:my-codes:live";
+const myCodes = { all() { return ls.get(CODES_KEY) || {}; }, get(id) { return this.all()[id] || null; },
+  set(id, code) { const a = this.all(); a[id] = code; ls.set(CODES_KEY, a); }, del(id) { const a = this.all(); delete a[id]; ls.set(CODES_KEY, a); } };
+const stewardKeys = {};   // unlocked this visit: map id -> key
+
+/* =====================================================================
+   The lots: the city's land bank layer, read live
+   ===================================================================== */
+const PARCEL_FORMAT = 2;
+const idb = {
+  open() { return new Promise((ok, no) => { const r = indexedDB.open("plvt", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); },
+  async get(k) { try { const d = await this.open(); return await new Promise((ok, no) => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }); } catch { return null; } },
+  async set(k, v) { try { const d = await this.open(); await new Promise((ok, no) => { const t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = ok; t.onerror = () => no(t.error); }); } catch {} }
+};
+async function getJson(url) {
+  const res = await fetch(url); if (!res.ok) throw new Error(`The city's service answered ${res.status}`);
+  const d = await res.json(); if (d && d.error) throw new Error(d.error.message || "The city's service returned an error");
+  return d;
+}
+async function loadParcels() {
+  const L = CONFIG.parcelsUrl.replace(/\/+$/, "");
+  const [meta, { count }] = await Promise.all([getJson(`${L}?f=json`), getJson(`${L}/query?where=1%3D1&returnCountOnly=true&f=json`)]);
+  const edited = meta.editingInfo?.dataLastEditDate || meta.editingInfo?.lastEditDate || null;
+  const key = `v${PARCEL_FORMAT}|${L}|${edited}|${count}`;
+  const hit = await idb.get("parcels");
+  if (hit && hit.key === key) return hit.fc;
+  const oid = meta.objectIdField || "OBJECTID";
+  const fields = (meta.fields || []).filter(f => f.name !== oid && f.type !== "esriFieldTypeGeometry" && !/^shape/i.test(f.name)).map(f => ({ name: f.name, alias: f.alias || f.name }));
+  const size = Math.min(meta.maxRecordCount || 1000, 2000), offsets = [];
+  for (let o = 0; o < count; o += size) offsets.push(o);
+  const q = o => new URLSearchParams({ where: "1=1", outFields: "*", outSR: "4326", geometryPrecision: "6", orderByFields: oid, resultOffset: o, resultRecordCount: size, f: "geojson" });
+  const pages = await Promise.all(offsets.map(o => getJson(`${L}/query?${q(o)}`)));
+  const raw = pages.flatMap(p => p.features || []);
+  if (raw.length < count) throw new Error(`Only ${fmt(raw.length)} of ${fmt(count)} lots came back`);
+  const fc = buildParcels(raw, fields.length ? fields : null);
+  fc.metadata = { edited, count: fc.features.length, fields: fields.length ? fields : Object.keys(raw[0]?.properties || {}).filter(k => k !== oid).map(n => ({ name: n, alias: n })) };
+  idb.set("parcels", { key, fc });
+  return fc;
+}
+// City records -> what the map needs: id, label, center point, plus the city's own fields for the parcel card.
+function buildParcels(raw) {
+  const items = [], seen = new Set();
+  for (const f of raw) {
+    const g = f.geometry; if (!g || (g.type !== "Polygon" && g.type !== "MultiPolygon")) continue;
+    const p = f.properties || {}, id = normId(p[CONFIG.idField]); if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const [cx, cy] = centroid(g), city = { ...p }; delete city.OBJECTID;
+    items.push({ addr: parseAddress(p[CONFIG.addressField]), f: { type: "Feature", geometry: g, properties: { id, d: displayId(String(p[CONFIG.idField]).trim()), a: "", cx: +cx.toFixed(6), cy: +cy.toFixed(6), city } } });
+  }
+  const cell = 0.002, grid = new Map(), gk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
+  for (const it of items) if (it.addr?.full) { const k = gk(it.f.properties.cx, it.f.properties.cy); grid.has(k) ? grid.get(k).push(it) : grid.set(k, [it]); }
+  for (const it of items) {
+    const P = it.f.properties, a = it.addr;
+    if (a?.full) { P.a = a.full; continue; }
+    if (a?.street) { P.a = `Lot on ${a.street}`; continue; }
+    const kx = Math.cos(P.cy * Math.PI / 180), gx = Math.floor(P.cx / cell), gy = Math.floor(P.cy / cell);
+    let best = null, bd = Infinity;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const b of grid.get(`${gx + dx},${gy + dy}`) || []) {
+      const q = b.f.properties, d = ((q.cx - P.cx) * kx) ** 2 + (q.cy - P.cy) ** 2; if (d < bd) { bd = d; best = b; }
+    }
+    const meters = best ? Math.sqrt(bd) * 111320 : Infinity;
+    P.a = meters < 400 ? `${meters < 60 ? "Next to" : "Near"} ${best.addr.full}` : `Parcel ${P.d}`;
+  }
+  return { type: "FeatureCollection", features: items.map(it => it.f) };
+}
+function titleCase(s) {
+  return String(s).toLowerCase().split(/\s+/).filter(Boolean).map(w =>
+    /^\d+(st|nd|rd|th)$/.test(w) ? w : /^\d/.test(w) || /^(n|s|e|w|ne|nw|se|sw)$/.test(w) ? w.toUpperCase()
+    : w.replace(/(^|['-])([a-z])/g, (_, x, y) => x + y.toUpperCase()).replace(/^Mc([a-z])/, (_, y) => "Mc" + y.toUpperCase())).join(" ");
+}
+function parseAddress(raw) {
+  const s = String(raw ?? "").split(",")[0].replace(/\s+/g, " ").trim();
+  if (!s || /^(null|none|n\/a|0)$/i.test(s)) return null;
+  const m = s.match(/^(\d+[A-Za-z]?(?:-\d+[A-Za-z]?)?)\s+(.+)$/);
+  if (m) return /^0+$/.test(m[1]) ? { street: titleCase(m[2]) } : { full: titleCase(`${m[1]} ${m[2]}`), street: titleCase(m[2]) };
+  if (/\d/.test(s) && !/[A-Za-z]{2,}/.test(s)) return null;
+  return { street: titleCase(s) };
+}
+function centroid(g) {
+  let x = 0, y = 0, n = 0;
+  for (const r of g.type === "Polygon" ? [g.coordinates[0]] : g.coordinates.map(p => p[0])) for (let i = 0; i < r.length - 1; i++) { x += r[i][0]; y += r[i][1]; n++; }
+  return n ? [x / n, y / n] : [0, 0];
+}
+
+/* =====================================================================
+   App state and routing
+   ===================================================================== */
+const S = {
+  fc: null, byId: new Map(), ids: [], fields: [], parcelsError: null,
+  map: null, code: null, member: null, tally: new Map(), mine: new Set(), max: 0,
+  view: "everyone", mode: "map", sel: null, me: null, listQuery: "", listSort: "votes"
+};
+let parcelsReady = null, gl = null;
+
+function route() {
+  const h = location.hash.replace(/^#\/?/, ""), [path, qs] = h.split("?"), parts = path.split("/").filter(Boolean), q = new URLSearchParams(qs || "");
+  closeCard();
+  if (!parts.length) return showHome();
+  if (parts[0] === "new") return showNew();
+  if (parts[0] === "join" && parts[1]) return joinLink(parts[1]);
+  if (parts[0] === "m" && parts[1]) return parts[2] === "codes" ? showCodes(parts[1]) : showMap(parts[1], q.get("lot"));
+  location.hash = "";
+}
+// An invite card's QR code opens #/join/<code>: become that member and go straight to the map.
+async function joinLink(code) {
+  try { const r = await Store.join(code); myCodes.set(r.map, normCode(code)); history.replaceState(null, "", `#/m/${r.map}`); route(); }
+  catch (e) { setPage(`<main class="page"><a class="back" href="#/">← All maps</a><h1>That invite code didn't work</h1><p class="lead">${esc(errText(e))}</p></main>`); }
+}
+function setPage(html) {
+  document.body.classList.remove("on-map"); $("#map").hidden = true;
+  $("#app").innerHTML = html; window.scrollTo(0, 0);
+}
+
+/* ------------------------------------------------------------------ home */
+async function showHome() {
+  let maps; try { maps = await Store.maps(); } catch (e) { return setPage(`<main class="page"><h1>Public Land Voting Tool</h1><p class="lead">${esc(errText(e))}</p><button class="btn" onclick="route()">Try again</button></main>`); }
+  setPage(`<main class="page">
+    <h1>Public Land Voting Tool</h1>
+    <p class="lead">Cleveland's public vacant land has no market, so nothing signals what it should become. Here, organized groups of people vote on it, one lot at a time, and the votes become a public record anyone can see and download.</p>
+    <div class="panel" style="margin-top:18px">
+      <label for="home-code" style="display:block;font-weight:650;margin-bottom:6px">Have an invite code or a steward key?</label>
+      <form class="join" data-join><input class="text" id="home-code" placeholder="K7P3-QX9M or three words" autocomplete="off" autocapitalize="none" spellcheck="false"><button class="btn btn-dark">Go</button></form>
+      <div class="muted" style="font-size:13.5px;margin-top:6px">An invite code takes you to your map to vote. A steward key takes you to that map's invite codes.</div>
+      <div class="form-msg" data-msg hidden></div>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:30px"><h2 style="margin:0">Maps</h2><a class="btn btn-sm" href="#/new">Start a map</a></div>
+    <div class="maps" style="margin-top:12px">${maps.length ? maps.map(m => `<a class="map-row" href="#/m/${m.id}">
+        <div class="q">${esc(m.question)}</div>
+        <div class="meta">${m.steward ? `${esc(m.steward)} · ` : ""}${plural(m.budget, "vote", "votes")} each · ${fmt(m.used)} of ${fmt(m.issued)} members voted · ${plural(m.votes, "vote", "votes")} on ${plural(m.lots, "lot", "lots")}${m.onsite ? " · on-site" : ""}</div></a>`).join("")
+      : `<div class="empty">No maps yet. A coalition starts one by writing its question and choosing how many votes each member gets.</div>`}</div>
+    <div class="tools no-print">
+      ${PROTOTYPE ? `<b style="color:var(--ink)">Prototype.</b> Everything here is saved in this browser only, apart from the public record.
+      <div class="row" style="margin-top:6px;gap:4px 14px">
+        <button class="link" data-sample>Add two sample maps</button>
+        <button class="link" data-dl>Download every vote (CSV)</button>
+        <button class="link" data-export>Save the whole record (JSON)</button>
+        <label class="link" style="cursor:pointer">Load a saved record<input type="file" accept=".json,application/json" data-import hidden></label>
+        <button class="link" data-reset>Erase everything</button>
+      </div>` : `Every vote on every map is public. <button class="link" data-dl>Download them all (CSV)</button>. No names or locations are kept; members are numbers.`}
+      ${S.parcelsError ? `<div class="form-msg">The city's lots didn't load: ${esc(S.parcelsError)}</div>` : ""}
+    </div>
+  </main>`);
+  $("[data-join]").onsubmit = async e => {
+    e.preventDefault(); const msg = $("[data-msg]"); msg.hidden = true;
+    const raw = $("#home-code").value;
+    if (normKey(raw).split(" ").length >= 3) {   // three words: a steward key
+      let ids; try { ids = await Store.findByKey(raw); } catch (err) { msg.textContent = errText(err); msg.hidden = false; return; }
+      if (ids.length) { ids.forEach(id => stewardKeys[id] = raw); location.hash = `#/m/${ids[0]}/codes`; return; }
+      msg.textContent = PROTOTYPE ? "No map saved in this browser has that steward key. Check the words, and make sure you're in the same browser where the map was made." : "No map has that steward key. Check the three words.";
+      msg.hidden = false; return;
+    }
+    try { const r = await Store.join(raw); myCodes.set(r.map, normCode(raw)); location.hash = `#/m/${r.map}`; }
+    catch (err) { msg.textContent = errText(err); msg.hidden = false; }
+  };
+  $("[data-dl]").onclick = async () => downloadRecord();
+  if (!PROTOTYPE) return;
+  $("[data-export]").onclick = () => downloadFile(`public-land-votes-record-${new Date().toISOString().slice(0, 10)}.json`, Store.exportAll(), "application/json");
+  $("[data-import]").onchange = async e => { try { Store.importAll(await e.target.files[0].text()); toast("Record loaded."); showHome(); } catch (err) { toast(err.message, { error: true }); } };
+  $("[data-reset]").onclick = () => { if (confirm("Erase every map, code, and vote saved in this browser?")) { Store.reset(); ls.del("plvt:my-codes"); showHome(); } };
+  $("[data-sample]").onclick = async e => { e.target.disabled = true; e.target.textContent = "Adding…"; try { await addSamples(); showHome(); toast("Added two sample maps with invented votes."); } catch (err) { toast(errText(err), { error: true }); e.target.disabled = false; } };
+}
+async function downloadRecord(id) {
+  const rows = await Store.record(id), stamp = new Date().toISOString().slice(0, 10);
+  const disp = p => S.byId.get(p)?.properties.d || displayId(p), label = p => S.byId.get(p)?.properties.a || "";
+  downloadFile(`public-land-votes${id ? "-" + id : ""}-${stamp}.csv`,
+    csv([["map", "question", "parcel", "label", "member", "voted_at", "on_site"], ...rows.map(r => [r.map, r.question, disp(r.parcel), label(r.parcel), r.member, r.at, r.onsite == null ? "" : r.onsite ? "yes" : "no"])]), "text/csv");
+}
+
+/* --------------------------------------------------------- start a map */
+function showNew() {
+  setPage(`<main class="page">
+    <a class="back" href="#/">← All maps</a>
+    <h1>Start a map</h1>
+    <p class="lead">A map is a coalition's question asked of every lot in the city's land bank. You set the terms; they're shown on the map, and you're responsible for them.</p>
+    <form class="panel" data-new style="margin-top:16px">
+      <div class="field" style="margin-top:0"><label for="n-q">The question</label>
+        <textarea id="n-q" required maxlength="200" placeholder="Where should our block club put a garden?"></textarea>
+        <div class="hint">This is what a vote means. There are no built-in categories.</div></div>
+      <div class="field"><label for="n-s">Coalition or steward</label><input class="text" id="n-s" maxlength="80" placeholder="Hough Block Club Network">
+        <div class="hint">Shown on the map as the group responsible for it.</div></div>
+      <div class="grid2">
+        <div class="field"><label for="n-b">Votes per member</label><input class="text" id="n-b" type="number" min="1" max="100" value="5" required>
+          <div class="hint">Fewer votes make members choose.</div></div>
+        <div class="field"><label for="n-m">Invite codes</label><input class="text" id="n-m" type="number" min="1" max="2000" value="40" required>
+          <div class="hint">One per member. You can add more later.</div></div>
+      </div>
+      <div class="field"><label class="check"><input type="checkbox" id="n-o"><span><b>On-site voting.</b> A vote counts only if it's cast within ${CONFIG.onsiteMeters} m of the lot. Only a yes/no is kept, never a location.</span></label></div>
+      <div class="row" style="margin-top:20px"><button class="btn btn-dark">Create the map</button></div>
+    </form>
+  </main>`);
+  $("[data-new]").onsubmit = async e => {
+    e.preventDefault();
+    const btn = $("[data-new] button.btn-dark"); btn.disabled = true; btn.textContent = "Creating…";
+    let r; try { r = await Store.create({ question: $("#n-q").value.trim(), steward: $("#n-s").value.trim(), budget: Math.max(1, Math.min(100, +$("#n-b").value || 5)),
+      members: Math.max(1, Math.min(2000, +$("#n-m").value || 1)), onsite: $("#n-o").checked }); }
+    catch (err) { toast(errText(err), { error: true, ms: 6000 }); btn.disabled = false; btn.textContent = "Create the map"; return; }
+    stewardKeys[r.map.id] = r.key; S.freshKey = r.key;
+    location.hash = `#/m/${r.map.id}/codes`;
+  };
+}
+
+/* ------------------------------------------- invite codes (steward) */
+async function showCodes(id) {
+  let m; try { m = await Store.map(id); } catch (e) { return setPage(`<main class="page"><a class="back" href="#/">← All maps</a><h1>${errText(e)}</h1></main>`); }
+  const key = stewardKeys[id];
+  if (!key) {
+    setPage(`<main class="page"><a class="back" href="#/m/${id}">← Back to the map</a><h1>Invite codes</h1>
+      <p class="lead">${esc(m.question)}</p>
+      <form class="panel" data-unlock><label for="k" style="font-weight:600">Steward key</label><div class="join"><input class="text" id="k" autocomplete="off" placeholder="three words"><button class="btn btn-dark">Show codes</button></div><div class="form-msg" data-msg hidden></div>
+      <p class="muted" style="font-size:14px;margin-top:10px">For the map's steward. The three-word key was shown when the map was made.</p></form></main>`);
+    $("[data-unlock]").onsubmit = async e => { e.preventDefault(); try { await Store.codes(id, $("#k").value); stewardKeys[id] = $("#k").value; showCodes(id); } catch (err) { const msg = $("[data-msg]"); msg.textContent = errText(err); msg.hidden = false; } };
+    return;
+  }
+  const codes = await Store.codes(id, key), fresh = S.freshKey; S.freshKey = null;
+  const here = location.href.split("#")[0], joinUrl = c => `${here}#/join/${c}`;
+  setPage(`<main class="page">
+    <a class="back no-print" href="#/m/${id}">← Back to the map</a>
+    <div class="no-print">
+      <h1>${fresh ? "Your map is ready" : "Invite codes"}</h1>
+      <p class="lead">${esc(m.question)}</p>
+      ${fresh ? `<div class="panel"><div style="font-weight:650">Your steward key</div><div class="key-box"><b>${esc(fresh)}</b></div><p class="muted" style="font-size:14px;margin:0">Keep it. It's the only way back to these codes, and nobody can recover it.</p></div>` : ""}
+      <div class="panel" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between"><div><b>${fmt(codes.length)}</b> codes issued, <b>${fmt(codes.filter(c => c.used_at).length)}</b> used</div>
+          <div class="row"><button class="btn btn-sm btn-dark" data-print>Print invite cards</button><button class="btn btn-sm" data-csv>Download codes</button></div></div>
+        <form class="row" data-add style="margin-top:12px"><label for="add-n" class="muted" style="font-size:14px">Add</label><input class="text" id="add-n" type="number" min="1" max="1000" value="10" style="width:90px;min-height:38px"><button class="btn btn-sm">more codes</button></form>
+        <table class="codes"><thead><tr><th>Member</th><th>Code</th><th>Status</th></tr></thead><tbody>
+          ${codes.map(c => `<tr><td>${c.member}</td><td class="code">${showCode(c.code)}</td><td>${c.used_at ? `Voted ${fmtDate(c.used_at)}` : `<span class="muted">Not used</span>`}</td></tr>`).join("")}
+        </tbody></table>
+      </div>
+    </div>
+    <div class="cards" data-cards hidden>${codes.filter(c => !c.used_at).map(c => `<div class="invite"><div class="iq">${esc(m.question)}</div><div class="ic">${showCode(c.code)}</div>
+      <div class="it">${m.steward ? esc(m.steward) + " · " : ""}${plural(m.budget, "vote", "votes")}${m.onsite ? ", cast at the lot" : ""}. Scan to vote, or open the address below and enter this code.<br>${esc(here)}</div><div class="qr" data-qr="${esc(joinUrl(c.code))}"></div></div>`).join("")}</div>
+  </main>`);
+  $("[data-print]").onclick = async e => {
+    const btn = e.currentTarget, c = $("[data-cards]");
+    if (!window.qrcode) { btn.disabled = true; btn.textContent = "Preparing cards…"; try { await loadScript(QR_JS); } catch {} btn.disabled = false; btn.textContent = "Print invite cards"; }
+    if (window.qrcode) $$("[data-qr]", c).forEach(el => { if (el.firstChild) return; const q = qrcode(0, "M"); q.addData(el.dataset.qr); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); });
+    c.hidden = false; window.print(); c.hidden = true;
+  };
+  $("[data-csv]").onclick = () => downloadFile(`invite-codes-${id}.csv`, csv([["member", "code", "used_at"], ...codes.map(c => [c.member, showCode(c.code), c.used_at || ""])]), "text/csv");
+  $("[data-add]").onsubmit = async e => { e.preventDefault(); const n = Math.max(1, Math.min(1000, +$("#add-n").value || 1)); try { await Store.addCodes(id, key, n); toast(`Added ${plural(n, "code", "codes")}.`); showCodes(id); } catch (err) { toast(errText(err), { error: true }); } };
+}
+
+/* =====================================================================
+   The map view
+   ===================================================================== */
+async function showMap(id, lot) {
+  let m; try { m = await Store.map(id); } catch (e) { return setPage(`<main class="page"><a class="back" href="#/">← All maps</a><h1>${errText(e)}</h1></main>`); }
+  const switching = !S.map || S.map.id !== id;
+  S.map = m; S.code = myCodes.get(id); S.member = null;
+  if (S.code) { try { S.member = (await Store.join(S.code)).member; } catch (e) { if (String(e.message) === "code_not_found") myCodes.del(id); S.code = null; } }
+  if (switching) { S.view = "everyone"; S.mode = "map"; S.sel = null; S.listQuery = ""; }
+  document.body.classList.add("on-map");
+  $("#app").innerHTML = `<header class="head" data-head></header><section class="member" data-member aria-label="Your votes"></section>
+    <button class="locate" data-locate aria-label="Center the map on me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.2"/></svg></button>
+    <div class="list" data-list hidden></div><aside class="card" data-card hidden aria-label="Lot"></aside>`;
+  $("[data-locate]").onclick = () => locate(true);
+  renderHead(); renderMember();
+  if (!S.fc) {
+    $("[data-head]").insertAdjacentHTML("beforeend", `<div class="terms" data-wait>Loading the city's lots…</div>`);
+    try { await parcelsReady; } catch {}
+    $("[data-wait]")?.remove();
+    if (!S.fc) { toast(`The city's lots didn't load. ${S.parcelsError || ""}`, { error: true, ms: 8000 }); return; }
+  }
+  await refresh();
+  await ensureMap();
+  $("#map").hidden = false; gl.resize();
+  painted.clear(); paintAll(); applyView();
+  if (S.mode === "list") renderList();
+  if (lot && S.byId.has(lot)) { flyTo(lot); openCard(lot); }
+  else if (switching && matchMedia("(pointer: coarse)").matches) locate(false);   // on phones, start where the voter is
+  startLive();
+}
+// Other people's votes: picked up every few seconds while a map is open and on screen.
+let liveTimer = 0, liveBusy = false;
+function startLive() {
+  clearInterval(liveTimer); if (PROTOTYPE) return;
+  liveTimer = setInterval(async () => {
+    if (document.hidden || liveBusy || !S.map || !document.body.classList.contains("on-map")) return;
+    liveBusy = true;
+    try { const before = S.map.votes; await refresh(); paintAll(); renderHead(); if (S.code) renderMember(); if (S.mode === "list") renderList();
+          if (S.sel && S.map.votes !== before && !$("[data-card] .vote-msg.bad")) openCard(S.sel); }
+    catch {} finally { liveBusy = false; }
+  }, CONFIG.refreshSeconds * 1000);
+}
+async function refresh() {
+  S.tally = await Store.tally(S.map.id);
+  S.max = Math.max(0, ...S.tally.values());
+  S.mine = S.code ? await Store.mine(S.code) : new Set();
+  S.map = await Store.map(S.map.id);
+}
+const level = id => { const c = S.tally.get(id) || 0; return c ? Math.max(1, Math.ceil(5 * c / (S.max || 1))) : 0; };
+
+function renderHead() {
+  const m = S.map, el = $("[data-head]"); if (!el) return;
+  el.innerHTML = `<div class="top"><a class="back" href="#/">← All maps</a><div class="row" style="gap:12px"><a class="link" style="font-size:12.5px;font-weight:550;color:var(--muted)" href="#/m/${m.id}/codes">Invite codes</a><button class="link" style="font-size:12.5px;font-weight:550;color:var(--muted)" data-dlmap>Download votes</button></div></div>
+    <h1>${esc(m.question)}</h1>
+    <div class="terms">${m.steward ? `<span>Set by <b>${esc(m.steward)}</b></span>` : ""}<span><b>${fmt(m.budget)}</b> ${m.budget === 1 ? "vote" : "votes"} per member</span>
+      <span><b>${fmt(m.used)}</b> of ${fmt(m.issued)} members voted</span><span><b>${fmt(m.votes)}</b> ${m.votes === 1 ? "vote" : "votes"} on ${plural(m.lots, "lot", "lots")}</span>
+      ${m.onsite ? `<span><b>On-site</b>: votes count only at the lot</span>` : ""}</div>
+    <div class="ctl"><div class="seg" role="group" aria-label="Whose votes"><button data-view="everyone" aria-pressed="${S.view === "everyone"}">Everyone</button><button data-view="mine" aria-pressed="${S.view === "mine"}">Mine</button></div>
+      <div class="seg" role="group" aria-label="Show as"><button data-mode="map" aria-pressed="${S.mode === "map"}">Map</button><button data-mode="list" aria-pressed="${S.mode === "list"}">List</button></div></div>
+    <div class="legend">${S.view === "mine" ? `<i class="mine"></i> Your votes <i class="none" style="margin-left:10px"></i> Other lots`
+      : `<span>Fewer</span><span class="ramp">${RAMP.map(c => `<i style="background:${c}"></i>`).join("")}</span><span>More votes</span><i class="none" style="margin-left:8px"></i><span>None</span>`}</div>`;
+  $$("[data-view]", el).forEach(b => b.onclick = () => { S.view = b.dataset.view; renderHead(); applyView(); if (S.mode === "list") renderList(); });
+  $$("[data-mode]", el).forEach(b => b.onclick = () => { S.mode = b.dataset.mode; renderHead(); applyView(); });
+  $("[data-dlmap]", el).onclick = () => downloadRecord(m.id);
+  document.documentElement.style.setProperty("--list-top", `${el.offsetHeight + 24}px`);
+}
+function renderMember() {
+  const el = $("[data-member]"); if (!el) return;
+  const m = S.map;
+  if (!S.code) {
+    el.innerHTML = `<div style="font-weight:650">Anyone can look. Members vote.</div>
+      <form class="join" data-join style="margin-top:6px"><label class="sr" for="m-code">Invite code</label><input class="text code-input" id="m-code" placeholder="Invite code" autocomplete="off" autocapitalize="characters" spellcheck="false" style="min-height:42px"><button class="btn btn-dark btn-sm" style="min-height:42px">Join</button></form>
+      <div class="form-msg" data-msg hidden></div>`;
+    $("[data-join]", el).onsubmit = async e => {
+      e.preventDefault(); const msg = $("[data-msg]", el), raw = $("#m-code", el).value; msg.hidden = true;
+      try {
+        const r = await Store.join(raw);
+        if (r.map !== m.id) { myCodes.set(r.map, normCode(raw)); toast("That code is for a different map. Taking you there."); location.hash = `#/m/${r.map}`; return; }
+        myCodes.set(m.id, normCode(raw)); S.code = normCode(raw); S.member = r.member;
+        await refresh(); paintAll(); renderMember(); if (S.sel) openCard(S.sel); if (S.mode === "list") renderList();
+        toast(`You're member ${r.member}. Tap a lot to vote for it.`);
+      } catch (err) { msg.textContent = errText(err); msg.hidden = false; }
+    };
+  } else {
+    const used = S.mine.size, left = Math.max(0, m.budget - used);
+    el.innerHTML = `<div class="who"><div><b>Member ${S.member}</b> · ${left ? `${plural(left, "vote", "votes")} left of ${fmt(m.budget)}` : `all ${fmt(m.budget)} votes cast`}</div>
+      <button class="link" style="font-size:13px;font-weight:550;color:var(--muted)" data-leave>Not you?</button></div>
+      <div class="muted" style="font-size:13px;margin-top:2px">${left ? "Tap a lot to vote for it. Tap it again to take the vote back." : "Tap one of your lots to take a vote back."}</div>
+      ${m.budget <= 40 ? `<div class="budget" aria-hidden="true">${Array.from({ length: m.budget }, (_, i) => `<i class="${i < used ? "" : "left"}"></i>`).join("")}</div>` : ""}`;
+    $("[data-leave]", el).onclick = () => { myCodes.del(m.id); S.code = S.member = null; S.mine = new Set(); paintAll(); renderMember(); if (S.sel) openCard(S.sel); };
+  }
+  document.documentElement.style.setProperty("--member-h", `${el.offsetHeight}px`);
+}
+
+/* --- voting: tap a lot to vote for it, tap it again to take the vote back --- */
+let lastTap = { id: null, t: 0 };
+async function tapLot(id) {
+  const now = Date.now();
+  if (lastTap.id === id && now - lastTap.t < 700) return;   // a double tap counts once
+  lastTap = { id, t: now };
+  if (!S.code) return openCard(id);
+  if (S.mine.has(id)) return takeBack(id);
+  if (S.map.budget - S.mine.size <= 0) return openCard(id, { text: `You've used all ${plural(S.map.budget, "vote", "votes")}. Tap one of your lots to take a vote back.`, bad: true });
+  return castVote(id);
+}
+async function castVote(id) {
+  const m = S.map, p = S.byId.get(id).properties;
+  try {
+    let onsite = null;
+    if (m.onsite) {
+      await openCard(id, { text: "Checking that you're at this lot…" });
+      const here = await position(true), d = metersBetween(here, [p.cx, p.cy]);
+      onsite = d <= CONFIG.onsiteMeters;
+      if (!onsite) throw new Error(`You're ${d < 1000 ? fmt(Math.round(d)) + " m" : (d / 1000).toFixed(1) + " km"} from this lot. This map counts votes only within ${CONFIG.onsiteMeters} m.`);
+    }
+    await Store.vote(S.code, id, onsite);
+    await afterVote(id); toast("Vote cast. It's public now.");
+  } catch (err) { await openCard(id, { text: errText(err), bad: true }); }
+}
+async function takeBack(id) { await Store.unvote(S.code, id); await afterVote(id); toast("Vote taken back."); }
+
+/* --- the parcel card: one lot at a time --- */
+async function openCard(id, note) {
+  const el = $("[data-card]"); if (!el || !S.byId.has(id)) return;
+  if (S.sel && S.sel !== id) setSel(S.sel, false);
+  S.sel = id; setSel(id, true);
+  const p = S.byId.get(id).properties, m = S.map, n = S.tally.get(id) || 0, mine = S.mine.has(id);
+  const others = (await Store.lotMaps(id)).filter(o => o.id !== m.id);
+  const left = m.budget - S.mine.size;
+  let action, hint;
+  if (!S.code) { action = `<button class="btn btn-block" data-focus-code>Enter an invite code to vote</button>`; hint = "Anyone can look. Members vote by tapping lots."; }
+  else if (mine) { action = `<div class="voted">✓ You voted for this lot</div><button class="btn btn-block" data-unvote>Take back your vote</button>`; hint = `Tapping the lot again also takes it back. You have ${plural(left, "vote", "votes")} left.`; }
+  else if (left <= 0) { action = ""; hint = `You've used all ${plural(m.budget, "vote", "votes")}. Tap one of your lots to take a vote back.`; }
+  else { action = `<button class="btn btn-dark btn-block" data-vote>Vote for this lot</button>`; hint = `${m.onsite ? `On this map a vote counts only within ${CONFIG.onsiteMeters} m of the lot; only yes or no is kept. ` : ""}You have ${plural(left, "vote", "votes")} left.`; }
+  action += `<div class="vote-msg${note?.bad ? " bad" : ""}">${esc(note ? note.text : hint)}</div>`;
+  const val = v => v === null || v === undefined || String(v).trim() === "" ? null : typeof v === "number" ? fmt(v) : String(v);
+  el.innerHTML = `<div class="grab"></div>
+    <div class="ch"><div><h2>${esc(p.a)}</h2><div class="pin">${esc(p.d)}</div></div><button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <h3>On this map</h3>
+    <div class="tallyline"><span class="swatch" style="background:${n ? RAMP[level(id) - 1] : "#fff"}"></span><span><b>${plural(n, "vote", "votes")}</b>${S.map.used ? `<span class="muted">, from the ${S.map.used === 1 ? "1 member who has" : fmt(S.map.used) + " members who have"} voted so far</span>` : ""}</span></div>
+    <div style="margin-top:12px">${action}</div>
+    <h3>The city's record</h3>
+    <dl class="city">${S.fields.map(f => { const v = val(p.city[f.name]); return `<dt>${esc(f.alias)}</dt><dd class="${v === null ? "blank" : ""}">${v === null ? "Blank" : esc(v)}</dd>`; }).join("")}</dl>
+    <h3>On other maps</h3>
+    <div class="others">${others.length ? others.map(o => `<a href="#/m/${o.id}?lot=${id}"><div class="oq">${esc(o.question)}</div><div class="on">${plural(o.votes, "vote", "votes")}${o.steward ? ` · ${esc(o.steward)}` : ""} →</div></a>`).join("")
+      : `<div class="muted" style="font-size:14px">No votes on this lot on any other map yet.</div>`}</div>`;
+  el.hidden = false; document.body.classList.add("card-open");
+  keepInView(id);
+  $("[data-close]", el).onclick = () => closeCard();
+  $("[data-focus-code]", el)?.addEventListener("click", () => { closeCard(); $("#m-code")?.focus(); });
+  $("[data-unvote]", el)?.addEventListener("click", () => takeBack(id));
+  $("[data-vote]", el)?.addEventListener("click", e => { e.currentTarget.disabled = true; castVote(id); });
+}
+async function afterVote(id) { await refresh(); paintAll(); renderHead(); renderMember(); openCard(id); if (S.mode === "list") renderList(); }
+function closeCard() {
+  const el = $("[data-card]"); if (el) el.hidden = true; document.body.classList.remove("card-open");
+  if (S.sel && gl) setSel(S.sel, false);
+  S.sel = null;
+}
+function position(fresh) {   // fresh: on-site votes need where the voter is now, not a minute ago
+  return new Promise((ok, no) => {
+    if (!navigator.geolocation) return no(new Error("This browser can't share its location."));
+    navigator.geolocation.getCurrentPosition(p => { S.me = [p.coords.longitude, p.coords.latitude]; showMe(); ok(S.me); },
+      e => no(new Error(e.code === 1 ? "Location is turned off for this page. Turn it on to vote on this map." : "Couldn't find where you are. Try again outside or near a window.")),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: fresh ? 0 : 10000 });
+  });
+}
+async function locate(loud) {
+  try { const me = await position(); gl.flyTo({ center: me, zoom: Math.max(gl.getZoom(), 16.5), duration: 900 }); }
+  catch (e) { if (loud) toast(e.message, { error: true, ms: 5000 }); }
+}
+
+/* --- list view: every lot, including the ones without addresses --- */
+function renderList() {
+  const el = $("[data-list]"); if (!el) return;
+  el.hidden = S.mode !== "list"; if (el.hidden) return;
+  const q = S.listQuery.trim().toLowerCase(), qn = normId(q);
+  let ids = S.ids;
+  if (S.view === "mine") ids = ids.filter(id => S.mine.has(id));
+  if (q) ids = ids.filter(id => { const p = S.byId.get(id).properties; return p.a.toLowerCase().includes(q) || (qn && p.id.includes(qn)); });
+  const sorted = [...ids].sort(S.listSort === "votes" ? (a, b) => (S.tally.get(b) || 0) - (S.tally.get(a) || 0) || S.byId.get(a).properties.a.localeCompare(S.byId.get(b).properties.a)
+    : (a, b) => S.byId.get(a).properties.a.localeCompare(S.byId.get(b).properties.a, undefined, { numeric: true }));
+  const shown = sorted.slice(0, CONFIG.listLimit);
+  const keep = document.activeElement?.id === "l-q";
+  el.innerHTML = `<div class="list-inner"><div class="bar"><label class="sr" for="l-q">Search lots</label><input class="text" id="l-q" placeholder="Street, address, or parcel number" value="${esc(S.listQuery)}" autocomplete="off">
+      <select id="l-s" aria-label="Sort"><option value="votes" ${S.listSort === "votes" ? "selected" : ""}>Most votes</option><option value="az" ${S.listSort === "az" ? "selected" : ""}>A to Z</option></select></div>
+    ${shown.map(id => { const p = S.byId.get(id).properties, n = S.tally.get(id) || 0;
+      return `<button class="lot" data-lot="${id}"><div><div class="ll">${esc(p.a)}</div><div class="lp">${esc(p.d)}${p.city.cityLandBankType ? " · " + esc(p.city.cityLandBankType) : ""}</div></div>
+        <div class="lv">${S.mine.has(id) ? `<span class="muted" style="font-weight:550;font-size:13px">Your vote</span>` : ""}<span class="swatch" style="width:16px;height:16px;background:${n ? RAMP[level(id) - 1] : "#fff"}"></span><span class="num">${fmt(n)}</span></div></button>`; }).join("")}
+    <div class="more">${sorted.length ? `Showing ${fmt(shown.length)} of ${plural(sorted.length, "lot", "lots")}.${sorted.length > shown.length ? " Search to narrow it down." : ""}` : S.view === "mine" ? "You haven't voted on this map yet." : "No lots match."}</div></div>`;
+  const qi = $("#l-q", el); qi.oninput = () => { S.listQuery = qi.value; renderList(); };
+  if (keep) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+  $("#l-s", el).onchange = e => { S.listSort = e.target.value; renderList(); };
+  $$("[data-lot]", el).forEach(b => b.onclick = () => { const id = b.dataset.lot; S.mode = "map"; renderHead(); applyView(); flyTo(id); openCard(id); });
+}
+
+/* --- drawing the map --- */
+const painted = new Map();
+function fsSet(id, st) { gl.setFeatureState({ source: "parcels", id }, st); gl.setFeatureState({ source: "pts", id }, st); }
+function paint(id) { const c = level(id), m = S.mine.has(id) ? 1 : 0, k = c * 2 + m; if (painted.get(id) !== k) { painted.set(id, k); fsSet(id, { c, m }); } }
+function paintAll() { if (gl) for (const id of S.ids) paint(id); }
+function setSel(id, on) { if (gl) fsSet(id, { s: on }); }
+function applyView() {
+  if (!gl) return;
+  const c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0];
+  const fill = S.view === "mine" ? ["match", m, 1, "#1D1A26", "#FFFFFF"] : ["match", c, 0, "#FFFFFF", ...RAMP.flatMap((col, i) => [i + 1, col]), "#FFFFFF"];
+  const op = S.view === "mine" ? ["match", m, 1, 0.9, 0.3] : ["match", c, 0, 0.35, 0.92];
+  gl.setPaintProperty("lots-fill", "fill-color", fill); gl.setPaintProperty("lots-fill", "fill-opacity", op);
+  gl.setPaintProperty("lots-dots", "circle-color", fill);
+  renderList();
+}
+async function loadBasemap() {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+  try { const r = await fetch(CONFIG.basemap, { signal: ctl.signal }); if (!r.ok) return null; const s = await r.json(); return s && s.version === 8 && Array.isArray(s.layers) ? s : null; }
+  catch { return null; } finally { clearTimeout(t); }
+}
+let basemapP = null;
+async function ensureMap() {
+  if (gl) return;
+  const base = await (basemapP ||= loadBasemap());
+  const c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0], s = ["boolean", ["feature-state", "s"], false];
+  const sources = {
+    parcels: { type: "geojson", data: S.fc, promoteId: "id", tolerance: 0.2 },
+    pts: { type: "geojson", promoteId: "id", data: { type: "FeatureCollection", features: S.fc.features.map(f => ({ type: "Feature", properties: { id: f.properties.id }, geometry: { type: "Point", coordinates: [f.properties.cx, f.properties.cy] } })) } },
+    me: { type: "geojson", data: { type: "FeatureCollection", features: [] } }
+  };
+  const layers = [
+    { id: "lots-fill", type: "fill", source: "parcels", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0.35 } },
+    { id: "lots-line", type: "line", source: "parcels", paint: { "line-color": "#A3A0A8", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.1, 15, 0.4, 18, 1] } },
+    { id: "lots-dots", type: "circle", source: "pts", maxzoom: 15, paint: {
+        "circle-color": "#FFFFFF", "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["case", [">", c, 0], 3, 1.6], 14, ["case", [">", c, 0], 4.6, 2.8]],
+        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0], "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0],
+        "circle-stroke-color": ["case", [">", m, 0], "#1D1A26", "#8F8C94"], "circle-stroke-width": ["case", [">", m, 0], 1.6, 0.35] } },
+    { id: "mine-halo", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#FFFFFF", "line-opacity": ["case", [">", m, 0], 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 13, 2.5, 16, 4.5, 18, 6] } },
+    { id: "mine-line", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#1D1A26", "line-opacity": ["case", [">", m, 0], 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1.2, 16, 2, 18, 2.6] } },
+    { id: "sel-line", type: "line", source: "parcels", paint: { "line-color": "#E0A21B", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 16, 3.5, 18, 4.5] } },
+    { id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 14, "circle-color": "#2F6FEB", "circle-opacity": 0.18 } },
+    { id: "me-dot", type: "circle", source: "me", paint: { "circle-radius": 6, "circle-color": "#2F6FEB", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } }
+  ];
+  let style;
+  if (base) { let at = base.layers.findIndex(l => l.type === "symbol"); if (at < 0) at = base.layers.length; style = { ...base, sources: { ...base.sources, ...sources }, layers: [...base.layers.slice(0, at), ...layers, ...base.layers.slice(at)] }; }
+  else style = { version: 8, sources: { base: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19, attribution: "&copy; OpenStreetMap contributors" }, ...sources },
+    layers: [{ id: "base", type: "raster", source: "base", paint: { "raster-saturation": -1, "raster-contrast": -0.2, "raster-brightness-min": 0.15 } }, ...layers] };
+  $("#map").hidden = false;
+  gl = new maplibregl.Map({ container: "map", style, bounds: bbox(), fitBoundsOptions: { padding: 40 }, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false, doubleClickZoom: false, maxZoom: 19.5 });   // taps are votes, so no double-tap zoom
+  gl.touchZoomRotate.disableRotation();
+  gl.on("error", e => console.warn("Map:", e.error?.message || e));
+  gl.on("click", e => {
+    // the lot right under the finger first; a few pixels around it only if that misses (small lots, zoomed out)
+    const exact = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill"] });
+    const f = exact.length ? exact : gl.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ["lots-fill", "lots-dots"] });
+    const hit = f.find(x => x.layer.id === "lots-fill") || f[0];
+    if (hit) tapLot(hit.id ?? normId(hit.properties.id)); else closeCard();
+  });
+  gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length ? "pointer" : ""; });
+  // Feature colors need the lot layers in place; 'load' also waits for every background tile, so don't wait past the style.
+  await new Promise(ok => { if (gl.isStyleLoaded()) return ok(); let done = false; const go = () => { if (!done) { done = true; ok(); } }; gl.once("load", go); gl.once("style.load", go); setTimeout(go, 8000); });
+}
+// Keep the open lot where it can be seen: between the top card and the parcel card on phones, left of the card on wide screens.
+function keepInView(id) {
+  if (!gl) return;
+  const p = S.byId.get(id).properties, pt = gl.project([p.cx, p.cy]), W = innerWidth, H = innerHeight, wide = W >= 900;
+  const head = $("[data-head]")?.getBoundingClientRect(), card = $("[data-card]")?.getBoundingClientRect();
+  const r = wide ? { left: (head?.right || 0) + 20, right: (card?.left || W) - 20, top: 20, bottom: H - 20 }
+                 : { left: 16, right: W - 16, top: (head?.bottom || 0) + 16, bottom: (card?.top || H) - 16 };
+  if (pt.x > r.left && pt.x < r.right && pt.y > r.top && pt.y < r.bottom) return;
+  gl.easeTo({ center: [p.cx, p.cy], offset: [(r.left + r.right) / 2 - W / 2, (r.top + r.bottom) / 2 - H / 2], duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350 });
+}
+function showMe() { gl?.getSource("me")?.setData({ type: "FeatureCollection", features: S.me ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: S.me } }] : [] }); }
+function flyTo(id) { const p = S.byId.get(id).properties; gl.jumpTo({ center: [p.cx, p.cy], zoom: Math.max(gl.getZoom(), 17) }); }
+function bbox() { let x0 = 180, y0 = 90, x1 = -180, y1 = -90; for (const f of S.fc.features) { const p = f.properties; x0 = Math.min(x0, p.cx); y0 = Math.min(y0, p.cy); x1 = Math.max(x1, p.cx); y1 = Math.max(y1, p.cy); } return [[x0, y0], [x1, y1]]; }
+
+/* --- prototype: two sample maps with invented votes, sharing some lots --- */
+async function addSamples() {
+  await parcelsReady; if (!S.fc) throw new Error(S.parcelsError || "The city's lots haven't loaded.");
+  let seed = 4242; const rnd = () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const P = S.fc.features.map(f => f.properties), near = (x, y, r) => P.filter(p => Math.abs(p.cx - x) < r && Math.abs(p.cy - y) * 1.33 < r);
+  const hough = near(-81.627, 41.504, 0.012), glenville = near(-81.611, 41.531, 0.012);
+  const make = async (spec, pool, voters) => {
+    const r = await Store.create(spec);
+    for (const code of r.codes.slice(0, voters)) {
+      const picks = new Set();
+      while (picks.size < spec.budget) picks.add(rnd() < 0.45 ? pool[Math.floor(rnd() * Math.min(pool.length, 25))].id : pool[Math.floor(rnd() * pool.length)].id);
+      for (const id of picks) await Store.vote(code, id, spec.onsite ? true : null);
+    }
+    return r;
+  };
+  if (!hough.length || !glenville.length) throw new Error("Couldn't find lots for the samples.");
+  await make({ question: "Which lots should become places to gather?", steward: "Data Day (sample)", budget: 5, members: 60, onsite: false }, [...hough, ...glenville.slice(0, 40)], 34);
+  await make({ question: "Where should our block clubs plant trees first?", steward: "East Side Block Clubs (sample)", budget: 3, members: 25, onsite: true }, [...hough.slice(0, 60), ...glenville], 17);
+}
+
+/* =====================================================================
+   Start
+   ===================================================================== */
+parcelsReady = loadParcels().then(fc => {
+  S.fc = fc; S.fields = fc.metadata.fields;
+  for (const f of fc.features) S.byId.set(f.properties.id, f);
+  S.ids = [...S.byId.keys()];
+}).catch(e => { S.parcelsError = e.message || String(e); console.error(e); });
+basemapP = loadBasemap();
+window.addEventListener("hashchange", route);
+(async () => {
+  if (!window.maplibregl) { $("#app").innerHTML = `<div class="boot"><div><b>The map library didn't load</b>It comes from cdn.jsdelivr.net. Check the internet connection.</div></div>`; return; }
+  if (!PROTOTYPE && !window.supabase) {
+    try { await loadScript(SUPABASE_JS); }
+    catch { $("#app").innerHTML = `<div class="boot"><div><b>The record didn't load</b>Its library comes from cdn.jsdelivr.net. Check the internet connection and reload.</div></div>`; return; }
+  }
+  route();
+})();
+</script>
+</body>
+</html>
