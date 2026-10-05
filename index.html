@@ -501,7 +501,7 @@ async function showHome() {
   let maps; try { maps = await Store.maps(); } catch (e) { return setPage(`<main class="page"><h1>Public Land Voting Tool</h1><p class="lead">${esc(errText(e))}</p><button class="btn" onclick="route()">Try again</button></main>`); }
   setPage(`<main class="page">
     <h1>Public Land Voting Tool</h1>
-    <p class="lead">Cleveland's public vacant land has no market, so nothing signals what it should become. Here, organized groups of people vote on it, one lot at a time, and the votes become a public record anyone can see and download.</p>
+    <p class="lead">Public land belongs to all of us. This is a shared place for neighbors, block clubs, and coalitions to say what they want it to become. Each group asks its own question, members vote one lot at a time, and every vote is public. Where maps overlap, groups find each other, start conversations, and find common ground.</p>
     <div class="panel" style="margin-top:18px">
       <label for="home-code" style="display:block;font-weight:650;margin-bottom:6px">Have an invite code or a steward key?</label>
       <form class="join" data-join><input class="text" id="home-code" placeholder="K7P3-QX9M or three words" autocomplete="off" autocapitalize="none" spellcheck="false"><button class="btn btn-dark">Go</button></form>
