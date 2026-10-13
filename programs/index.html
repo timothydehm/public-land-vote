@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Land Bank Program Vote</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='11' height='11' fill='%2300875F'/%3E%3Crect x='17' y='4' width='11' height='11' fill='%23E6A200'/%3E%3Crect x='4' y='17' width='11' height='11' fill='%230068A6'/%3E%3Crect x='17' y='17' width='11' height='11' fill='%23C9C7C2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="preconnect" href="https://services3.arcgis.com" crossorigin>
+<style>
+:root{
+  --ink:#1D1A26; --muted:#67646C; --line:#DCDAD6; --mist:#F3F2F0; --paper:#FFFFFF;
+  --open:#00875F; --yard:#B07A00; --dev:#0068A6; --tie:#77746E;
+  --ok:#1E7A5F; --danger:#9E2F2A;
+  --font:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-card:16px; --r-ctl:11px;
+  --shadow:0 1px 2px rgba(29,26,38,.07), 0 10px 30px rgba(29,26,38,.11);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--mist);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body.on-map{overflow:hidden;height:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45em;min-height:44px;padding:0 16px;border-radius:var(--r-ctl);
+  border:1.5px solid var(--line);background:var(--paper);font-weight:600;font-size:15px;white-space:nowrap;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:#bbb8b2}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn-sm{min-height:36px;font-size:14px;padding:0 12px}
+.btn-block{width:100%}
+.link{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font-size:inherit;cursor:pointer}
+.quiet{font-size:12.5px;font-weight:550;color:var(--muted)}
+.icon-btn{width:44px;height:44px;border-radius:var(--r-ctl);border:0;background:transparent;display:inline-grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--mist)}
+.icon-btn svg{width:22px;height:22px}
+input.text,select{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:var(--r-ctl);padding:0 12px;background:var(--paper)}
+input.text:focus,select:focus{outline:none;border-color:var(--ink)}
+.code-input{text-transform:uppercase;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;background:var(--mist);border-radius:var(--r-ctl);padding:3px}
+.seg button{border:0;background:transparent;min-height:34px;padding:0 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(29,26,38,.12)}
+
+/* the three choices */
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.choice{--c:var(--ink);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-height:54px;padding:7px 9px;border-radius:var(--r-ctl);
+  border:1.5px solid var(--line);background:var(--paper);text-align:left;color:var(--ink)}
+.choice:hover{border-color:var(--c)}
+.choice .cl{font-weight:650;font-size:14px;line-height:1.15;max-width:100%}
+.choice .cn{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.choice .cn i{width:10px;height:10px;border-radius:3px;flex:none;background:var(--c)}
+@media (max-width:420px){.choice{padding:7px 8px}.choice .cl{font-size:13.5px}}
+.choice[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.choice[aria-pressed="true"] .cn{color:rgba(255,255,255,.88)}
+.choice[aria-pressed="true"] .cn i{background:#fff}
+.choice:disabled{opacity:.42;cursor:not-allowed}
+.choice:disabled:hover{border-color:var(--line)}
+.c-open_space{--c:var(--open)} .c-yard_expansion{--c:var(--yard)} .c-development{--c:var(--dev)}
+
+/* ---------- pages (about, organizer) ---------- */
+.page{max-width:720px;margin:0 auto;padding:28px 18px 60px}
+.page h1{font-size:26px;letter-spacing:-.015em;margin:0 0 6px}
+.page h2{font-size:18px;margin:30px 0 10px;letter-spacing:-.005em}
+.page p{margin:0 0 10px}
+.lead{font-size:16.5px;color:var(--muted);max-width:62ch}
+.panel{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:18px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.join{display:flex;gap:8px;margin-top:4px}
+.join input{flex:1;min-width:0}
+.form-msg{color:var(--danger);font-size:14px;margin-top:6px}
+.field{margin-top:16px}
+.field label{display:block;font-weight:600;font-size:14.5px;margin-bottom:5px}
+.field .hint{font-size:13.5px;color:var(--muted);margin-top:5px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+.key-box{background:var(--mist);border-radius:var(--r-ctl);padding:12px 14px;margin:10px 0}
+.key-box b{display:block;font-size:20px;letter-spacing:-.005em}
+.prog{display:grid;gap:10px;margin-top:8px}
+.prog .p{display:grid;grid-template-columns:14px 1fr;gap:4px 10px;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:14px 16px}
+.prog .p i{width:14px;height:14px;border-radius:3px;margin-top:4px}
+.prog .p b{font-size:16px}
+.prog .p div{grid-column:2;font-size:15px;color:var(--muted)}
+table.t{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:8px}
+table.t th{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1.5px solid var(--line)}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--mist);vertical-align:top}
+table.t td.code{font-variant-numeric:tabular-nums;letter-spacing:.05em;font-weight:600}
+.batch{margin-top:12px}
+.batch .bh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.batch .bl{font-weight:650;font-size:16.5px}
+.batch .bm{font-size:13.5px;color:var(--muted);margin-top:2px}
+.batch details{margin-top:10px}
+.batch summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--muted)}
+.tools{margin-top:40px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.tools .link{font-weight:550;color:var(--muted)}
+.back{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:600;text-decoration:none;color:var(--muted);margin-bottom:14px}
+
+/* passkey cards, for printing */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:14px}
+.invite{border:1.5px dashed #c3c0ba;border-radius:12px;padding:14px;background:#fff;break-inside:avoid}
+.invite .iq{font-weight:650;font-size:14.5px;line-height:1.3}
+.invite .ib{font-size:12.5px;color:var(--muted);margin-top:2px}
+.invite .ic{font-size:22px;font-weight:700;letter-spacing:.07em;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.invite .it{font-size:12.5px;color:var(--muted);line-height:1.4;word-break:break-all}
+.invite .qr{width:96px;height:96px;margin-top:8px}
+.invite .qr svg{width:100%;height:100%;display:block}
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  .page{max-width:none;padding:0}
+  .cards{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ---------- the map view ---------- */
+#map{position:fixed;inset:0;background:#EFEFED}
+.maplibregl-ctrl-attrib{font-size:10.5px}
+.head{position:fixed;z-index:10;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;right:12px;max-width:440px;background:var(--paper);
+  border-radius:var(--r-card);box-shadow:var(--shadow);padding:11px 14px 11px}
+.head .top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px}
+.head .name{font-weight:650;color:var(--muted)}
+.head h1{margin:2px 0 0;font-size:17px;line-height:1.3;font-weight:700;letter-spacing:-.01em}
+.terms{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:5px;font-size:12.8px;color:var(--muted)}
+.terms b{color:var(--ink);font-weight:650}
+.head .ctl{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap}
+.legend{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.legend i.none{border:1px solid rgba(29,26,38,.2);background:#fff}
+
+.member{position:fixed;z-index:10;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);max-width:440px;background:var(--paper);
+  border-radius:var(--r-card);box-shadow:var(--shadow);padding:10px 10px 10px 12px;font-size:14px}
+.member .who{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.member .who b{font-size:14.5px}
+.member .hint{font-size:12.8px;color:var(--muted);margin-top:6px}
+.locate{position:fixed;z-index:9;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);width:46px;height:46px;border-radius:50%;border:0;background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center}
+.locate svg{width:22px;height:22px}
+@media (max-width:899px){.locate{bottom:calc(env(safe-area-inset-bottom,0px) + 16px + var(--member-h,120px) + 10px)}}
+@media (min-width:900px){.head,.member{left:20px}.head{top:20px}.member{bottom:28px}.locate{right:20px;bottom:28px}}
+
+/* the parcel card */
+.card{position:fixed;z-index:20;left:0;right:0;bottom:0;max-height:78vh;max-height:78dvh;overflow:auto;background:var(--paper);border-radius:20px 20px 0 0;
+  box-shadow:0 -10px 40px rgba(29,26,38,.18);padding:6px 18px calc(env(safe-area-inset-bottom,0px) + 20px)}
+@media (max-width:899px){
+  .card{max-height:58vh;max-height:58dvh}
+  body.card-open .head .top, body.card-open .head .terms, body.card-open .head .ctl, body.card-open .head .legend{display:none}
+  body.card-open .head h1{margin:0;font-size:15px}
+  body.card-open .locate, body.card-open .member{visibility:hidden}
+}
+@media (min-width:900px){.card{left:auto;right:20px;top:20px;bottom:28px;width:390px;max-height:none;border-radius:var(--r-card);box-shadow:var(--shadow)}}
+.card .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 6px}
+@media (min-width:900px){.card .grab{display:none}}
+.card .ch{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.card h2{margin:6px 0 0;font-size:19px;line-height:1.25;letter-spacing:-.01em}
+.card .pin{font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.card h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 6px;font-weight:600}
+.mix{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:14.5px}
+.mix .bar{height:8px;border-radius:4px;background:var(--mist);overflow:hidden}
+.mix .bar i{display:block;height:100%;border-radius:4px}
+.mix .lab{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.mix .lab i{width:12px;height:12px;border-radius:3px}
+.mix .n{font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
+.lead-line{font-size:13.5px;color:var(--muted);margin-top:8px}
+.vote-msg{font-size:13.5px;color:var(--muted);margin-top:8px}
+.vote-msg.bad{color:var(--danger)}
+.voted{font-weight:650;font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+dl.city{display:grid;grid-template-columns:minmax(120px,42%) 1fr;gap:6px 12px;margin:0;font-size:14px}
+dl.city dt{color:var(--muted)}
+dl.city dd{margin:0;word-break:break-word}
+dl.city dd.blank{color:#a19da6;font-style:italic}
+.others a{display:block;text-decoration:none;padding:9px 0;border-top:1px solid var(--mist);font-size:14.5px}
+.others a:first-child{border-top:0}
+.others .oq{font-weight:600;line-height:1.3}
+.others .on{font-size:13px;color:var(--muted)}
+
+/* list view */
+.list{position:fixed;z-index:8;inset:0;background:var(--mist);overflow:auto;padding:var(--list-top,220px) 12px 170px}
+@media (min-width:900px){.list{left:480px;padding:20px 20px 40px}}
+.list-inner{max-width:640px;margin:0 auto}
+.list .bar{display:flex;gap:8px;position:sticky;top:0;padding:8px 0;background:var(--mist);z-index:1}
+.list .bar input{flex:1}
+.list .bar select{width:auto}
+.lot{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--paper);border:0;border-radius:12px;padding:11px 13px;margin-top:6px;box-shadow:0 1px 2px rgba(29,26,38,.06)}
+.lot .ll{font-weight:600;font-size:15px;line-height:1.3}
+.lot .lp{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lot .lv{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;flex:none;font-variant-numeric:tabular-nums}
+.lot .lv span{display:inline-flex;align-items:center;gap:4px}
+.lot .lv i{width:9px;height:9px;border-radius:2px}
+.lot .lv .zero{opacity:.35}
+.list .more{font-size:13.5px;color:var(--muted);text-align:center;padding:14px}
+
+/* toast */
+.toast{position:fixed;z-index:800;left:50%;transform:translate(-50%,10px);opacity:0;pointer-events:none;max-width:min(420px,calc(100% - 24px));width:max-content;
+  background:var(--ink);color:#fff;border-radius:12px;padding:11px 16px;font-size:14.5px;line-height:1.3;box-shadow:0 8px 24px rgba(29,26,38,.25);
+  transition:opacity .18s,transform .18s;top:calc(env(safe-area-inset-top,0px) + 14px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.error{background:var(--danger)}
+
+.boot{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.boot b{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="map" hidden aria-label="Map of the city's land bank lots"></div>
+<div id="app"><div class="boot"><div><b>Land Bank Program Vote</b>Loading…</div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+/* =========================================================================
+   Land Bank Program Vote
+
+   A companion to the Public Land Voting Tool (one folder up). One map: the
+   City of Cleveland's land bank inventory, and three choices that match
+   the city's programs. Voters vote with a passkey issued by the organizer.
+
+   Passkeys and votes live in the shared database (Supabase, see
+   schema.sql in this folder), reached only through its lp_* functions.
+   Add ?prototype to the address to use a private copy kept in this
+   browser instead, with sample votes and tools for trying changes.
+   ========================================================================= */
+const CONFIG = {
+  title: "Land Bank Program Vote",
+  question: "What should each lot become?",
+  parcelsUrl: "https://services3.arcgis.com/dty2kHktVXHrqO8i/arcgis/rest/services/City_Landbank/FeatureServer/0",
+  idField: "parcelpin", addressField: "par_addr_all",
+  basemap: "https://tiles.openfreemap.org/styles/positron",
+  mainTool: "../",           // the Public Land Voting Tool, for the "on other maps" links
+  listLimit: 200,            // rows shown at once in the list view
+  refreshSeconds: 20,        // how often the open map picks up other people's votes
+  // The shared record. The publishable key is meant to be public; the database only allows the lp_* and pv_* functions.
+  supabaseUrl: "https://gftqwwxmtkjipnixuwif.supabase.co",
+  supabaseKey: "sb_publishable_qsEiLPwrqJY_dD5u7X15fQ_oR-S8WI4"
+};
+// The three choices. Edit the descriptions as the city's programs change. Ramps run light (few votes) to dark (many).
+const CHOICES = [
+  { key: "open_space", label: "Open space", ramp: ["#D3EEE3", "#93D3B8", "#3FB38A", "#00875F", "#00563D"],
+    about: "Kept open for the neighborhood: gardens, trees, meadow, a place to gather. The city leases some lots for community gardens, but it has no program for selling land to stay open." },
+  { key: "yard_expansion", label: "Yard expansion", ramp: ["#FBEBC8", "#F5CF7E", "#E6A200", "#B07A00", "#6E4C00"],
+    about: "Sold to the owner-occupant next door, to become part of their yard. Only a neighbor who owns and lives in the adjacent home can buy a lot this way, so this vote says a neighbor should get it." },
+  { key: "development", label: "Development", ramp: ["#D3E5F3", "#93C1E3", "#3F93CC", "#0068A6", "#003F66"],
+    about: "Sold for new construction, such as housing or a business. Buyers need a site plan, design review, and proof of financing." }
+];
+const TIE = ["#E6E5E2", "#C9C7C2", "#A3A09A", "#77746E", "#4A4844"];
+const CH = Object.fromEntries(CHOICES.map((c, i) => [c.key, { ...c, n: i + 1 }]));
+const lower = k => CH[k].label.toLowerCase();
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
+const QR_JS = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+const PROTOTYPE = new URLSearchParams(location.search).has("prototype") || !CONFIG.supabaseUrl || !CONFIG.supabaseKey;
+const WORDS = `acorn alder amber anchor apple arbor ash aspen aster autumn badger barley basil bay beach beacon bear beaver beech bell bench berry birch bison bloom bluff boat bramble branch breeze brick bridge brook bud burrow cabin canal canopy cardinal cedar chalk cherry chestnut chimney cider clay cloud clover coast cobalt comet copper coral corn cove coyote crane creek cricket crow cypress daisy dawn deer delta dew dove dune dusk eagle earth elm ember falcon fennel fern field finch fir firefly flint fog forest fox frog frost garden gate ginger glade glen goose granite grape grass grove gull harbor hare harvest hawk hazel heath hedge heron hickory hill hollow honey ibis iris ivy jade jay juniper kale kestrel lake lamp lane lantern larch lark laurel leaf lemon lilac lily lime linden lynx maple marsh meadow melon mill mink mint mist moon moss moth nest newt nutmeg oak oat ocean olive orchard oriole osprey otter owl pansy park path peach pear pebble pepper pier pine plaza plum pond poplar poppy porch prairie quail quarry rabbit rain raven reed ridge river robin rock rose rowan rye sage salt sand sapling sedge seed shore sky slate snow sorrel sparrow spring spruce square squirrel stone stork storm stream summer sun swallow swan sycamore teal tern thistle thyme tide timber toad tower trail trout tulip turtle valley violet walnut warbler wave whale wheat willow wind winter wolf wren yarrow`.split(/\s+/);
+
+/* ------------------------------------------------------------- utilities */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => new Intl.NumberFormat().format(n);
+const plural = (n, one, many) => `${fmt(n)} ${n === 1 ? one : many}`;
+const normId = v => String(v ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+const displayId = id => /^\d{8}$/.test(id) ? `${id.slice(0, 3)}-${id.slice(3, 5)}-${id.slice(5)}` : id;
+const normCode = v => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const showCode = c => c.length === 8 ? `${c.slice(0, 4)}-${c.slice(4)}` : c;
+function randInt(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+const ALPH = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const randStr = n => Array.from({ length: n }, () => ALPH[randInt(ALPH.length)]).join("");
+function threeWords() { const s = new Set(); while (s.size < 3) s.add(WORDS[randInt(WORDS.length)]); return [...s].join(" "); }
+const normKey = k => String(k || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const ls = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+function downloadFile(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+const csv = rows => rows.map(r => r.map(csvCell).join(",")).join("\n") + "\n";
+function fmtDate(d) { return new Date(d).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }); }
+const budgetText = b => CHOICES.filter(c => b[c.key] > 0).map(c => `${fmt(b[c.key])} ${lower(c.key)}`).join(", ");
+let toastTimer = 0;
+function toast(text, { error = false, ms = 3800 } = {}) {
+  const el = $("#toast"); el.textContent = text; el.classList.toggle("error", error);
+  el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+const ERR = {
+  key_not_found: "That passkey isn't recognized. Check it and try again.",
+  not_voter: "Enter your passkey to vote.",
+  budget_used: "You've used all your votes for that choice. Take one back to vote here.",
+  choice_off: "Your passkey doesn't include votes for that choice.",
+  bad_choice: "Pick open space, yard expansion, or development first.",
+  bad_key: "That organizer key doesn't match.",
+  bad_label: "Give the batch a label of up to 80 characters.",
+  bad_count: "Issue between 1 and 1,000 passkeys at a time.",
+  bad_budget: "Votes per choice must be between 0 and 100, with at least one choice above 0.",
+  batch_not_found: "That batch doesn't exist.",
+  parcel_not_found: "This lot isn't in the record yet. The city may have just added it; try again in an hour.",
+  too_many_attempts: "Too many tries from this network. Wait a few minutes and try again.",
+  network: "Couldn't reach the record. Check the connection and try again."
+};
+const errText = e => { const m = String(e?.message || e || ""); return ERR[m] || (/fetch|network|Failed|timeout|load failed/i.test(m) ? ERR.network : m || "Something went wrong."); };
+function loadScript(src) { return new Promise((ok, no) => document.head.appendChild(Object.assign(document.createElement("script"), { src, onload: ok, onerror: () => no(new Error("network")) }))); }
+
+/* =====================================================================
+   Store: everything people do. The prototype keeps one record in this
+   browser; the shared record is the same functions as database calls.
+   ===================================================================== */
+const DB_KEY = "lpv:prototype:v1";
+const LocalStore = (() => {
+  const empty = () => ({ org: null, batches: [], keys: {}, voters: 0, votes: {}, history: [] });
+  // votes: "parcel|voter" -> { choice, at }; keys: CODE -> { batch, voter, used_at }
+  let db = ls.get(DB_KEY) || empty();
+  const save = () => { if (!ls.set(DB_KEY, db)) toast("This browser couldn't save. Is it in private mode?", { error: true }); };
+  const allVotes = () => Object.entries(db.votes).map(([k, v]) => { const [parcel, voter] = k.split("|"); return { parcel, voter: +voter, ...v }; });
+  const batch = id => db.batches.find(b => b.id === id);
+  const orgOk = key => { if (!db.org || normKey(key) !== db.org) throw new Error("bad_key"); };
+  const issue = (b, n) => { const out = []; for (let i = 0; i < n; i++) { let c; do c = randStr(8); while (db.keys[c]); db.keys[c] = { batch: b.id, voter: ++db.voters, used_at: null }; out.push(c); } return out; };
+  const keyOf = code => { const k = db.keys[normCode(code)]; if (!k) throw new Error("not_voter"); return k; };
+  return {
+    async info() {
+      const v = allVotes(), keys = Object.values(db.keys);
+      const by = Object.fromEntries(CHOICES.map(c => [c.key, v.filter(x => x.choice === c.key).length]));
+      return { issued: keys.length, used: keys.filter(k => k.used_at).length, votes: v.length, lots: new Set(v.map(x => x.parcel)).size, by, organizer: !!db.org,
+        batches: db.batches.map(b => ({ id: b.id, label: b.label, budgets: b.budgets, created_at: b.created_at, issued: keys.filter(k => k.batch === b.id).length, used: keys.filter(k => k.batch === b.id && k.used_at).length })) };
+    },
+    async tally() {
+      const t = new Map();
+      for (const v of allVotes()) { const a = t.get(v.parcel) || [0, 0, 0]; a[CH[v.choice].n - 1]++; t.set(v.parcel, a); }
+      return t;
+    },
+    async record() {
+      return allVotes().map(v => { const k = Object.values(db.keys).find(x => x.voter === v.voter); return { parcel: v.parcel, choice: v.choice, voter: v.voter, batch: batch(k?.batch)?.label || "", at: v.at }; })
+        .sort((a, b) => a.at.localeCompare(b.at));
+    },
+    async join(code) { const k = db.keys[normCode(code)]; if (!k) throw new Error("key_not_found"); const b = batch(k.batch); return { voter: k.voter, batch: b.label, budgets: b.budgets }; },
+    async vote(code, parcel, choice) {
+      if (!CH[choice]) throw new Error("bad_choice");
+      const k = keyOf(code), key = `${parcel}|${k.voter}`, cur = db.votes[key]?.choice;
+      if (cur === choice) return;
+      const lim = batch(k.batch).budgets[choice];
+      if (!lim) throw new Error("choice_off");
+      if (allVotes().filter(v => v.voter === k.voter && v.choice === choice).length >= lim) throw new Error("budget_used");
+      const at = new Date().toISOString();
+      db.votes[key] = { choice, at }; k.used_at ||= at;
+      db.history.push({ parcel, voter: k.voter, choice, action: cur ? "change" : "vote", at });
+      save();
+    },
+    async unvote(code, parcel) {
+      const k = keyOf(code), key = `${parcel}|${k.voter}`, cur = db.votes[key]; if (!cur) return;
+      delete db.votes[key];
+      db.history.push({ parcel, voter: k.voter, choice: cur.choice, action: "take back", at: new Date().toISOString() });
+      save();
+    },
+    async mine(code) { const k = db.keys[normCode(code)]; if (!k) return new Map(); return new Map(allVotes().filter(v => v.voter === k.voter).map(v => [v.parcel, v.choice])); },
+    async lotMaps() { return []; },
+    async orgCheck(key) { orgOk(key); return true; },
+    async orgBatches(key) {
+      orgOk(key);
+      return [...db.batches].reverse().map(b => ({ ...b, keys: Object.entries(db.keys).filter(([, k]) => k.batch === b.id).map(([code, k]) => ({ code, voter: k.voter, used_at: k.used_at })).sort((x, y) => x.voter - y.voter) }));
+    },
+    async newBatch(key, { label, n, budgets }) {
+      orgOk(key);
+      const b = { id: (db.batches.at(-1)?.id || 0) + 1, label, budgets, created_at: new Date().toISOString() };
+      db.batches.push(b); const keys = issue(b, n); save();
+      return { batch: b.id, keys };
+    },
+    async addKeys(key, id, n) { orgOk(key); const b = batch(id); if (!b) throw new Error("batch_not_found"); const k = issue(b, n); save(); return k; },
+    // prototype only
+    setupOrg() { const k = threeWords(); db.org = normKey(k); save(); return k; },
+    exportAll() { return JSON.stringify(db, null, 1); },
+    importAll(text) { const d = JSON.parse(text); if (!d || !d.batches || !d.keys || !d.votes) throw new Error("That file isn't a saved record."); db = { ...empty(), ...d }; save(); },
+    reset() { db = empty(); save(); }
+  };
+})();
+
+let sbc = null;
+const sb = () => sbc || (sbc = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } }));
+async function rpc(fn, args) {
+  const { data, error } = await sb().rpc(fn, args || {});
+  if (error) throw new Error(/fetch/i.test(error.message || "") ? "network" : error.message || "unknown");
+  if (data && !Array.isArray(data) && data.error) throw new Error(data.error);
+  return data;
+}
+const RemoteStore = {
+  info: () => rpc("lp_info"),
+  async tally() { return new Map((await rpc("lp_tally")).map(([p, ...n]) => [p, n])); },
+  record: () => rpc("lp_record"),
+  join: code => rpc("lp_join", { p_code: code }),
+  vote: (code, parcel, choice) => rpc("lp_vote", { p_code: code, p_parcel: parcel, p_choice: choice }),
+  unvote: (code, parcel) => rpc("lp_unvote", { p_code: code, p_parcel: parcel }),
+  async mine(code) { return new Map(await rpc("lp_mine", { p_code: code })); },
+  async lotMaps(parcel) { try { return await rpc("pv_lot_maps", { p_parcel: parcel }); } catch { return []; } },
+  orgCheck: key => rpc("lp_org_check", { p_key: key }),
+  orgBatches: key => rpc("lp_org_batches", { p_key: key }),
+  newBatch: (key, { label, n, budgets }) => rpc("lp_new_batch", { p_key: key, p_label: label, p_n: n, p_open: budgets.open_space, p_yard: budgets.yard_expansion, p_dev: budgets.development }),
+  addKeys: (key, id, n) => rpc("lp_add_keys", { p_key: key, p_batch: id, p_n: n })
+};
+const Store = PROTOTYPE ? LocalStore : RemoteStore;
+
+// This device's passkey, and the choice picked last.
+const KEY_STORE = PROTOTYPE ? "lpv:passkey" : "lpv:passkey:live";
+const myKey = { get: () => ls.get(KEY_STORE), set: c => ls.set(KEY_STORE, c), del: () => ls.del(KEY_STORE) };
+let orgKey = null;   // unlocked this visit
+
+/* =====================================================================
+   The lots: the city's land bank layer, read live. Same code and cache
+   as the Public Land Voting Tool, so a visit to either fills both.
+   ===================================================================== */
+const PARCEL_FORMAT = 2;
+const idb = {
+  open() { return new Promise((ok, no) => { const r = indexedDB.open("plvt", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); },
+  async get(k) { try { const d = await this.open(); return await new Promise((ok, no) => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }); } catch { return null; } },
+  async set(k, v) { try { const d = await this.open(); await new Promise((ok, no) => { const t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = ok; t.onerror = () => no(t.error); }); } catch {} }
+};
+async function getJson(url) {
+  const res = await fetch(url); if (!res.ok) throw new Error(`The city's service answered ${res.status}`);
+  const d = await res.json(); if (d && d.error) throw new Error(d.error.message || "The city's service returned an error");
+  return d;
+}
+async function loadParcels() {
+  const L = CONFIG.parcelsUrl.replace(/\/+$/, "");
+  const [meta, { count }] = await Promise.all([getJson(`${L}?f=json`), getJson(`${L}/query?where=1%3D1&returnCountOnly=true&f=json`)]);
+  const edited = meta.editingInfo?.dataLastEditDate || meta.editingInfo?.lastEditDate || null;
+  const key = `v${PARCEL_FORMAT}|${L}|${edited}|${count}`;
+  const hit = await idb.get("parcels");
+  if (hit && hit.key === key) return hit.fc;
+  const oid = meta.objectIdField || "OBJECTID";
+  const fields = (meta.fields || []).filter(f => f.name !== oid && f.type !== "esriFieldTypeGeometry" && !/^shape/i.test(f.name)).map(f => ({ name: f.name, alias: f.alias || f.name }));
+  const size = Math.min(meta.maxRecordCount || 1000, 2000), offsets = [];
+  for (let o = 0; o < count; o += size) offsets.push(o);
+  const q = o => new URLSearchParams({ where: "1=1", outFields: "*", outSR: "4326", geometryPrecision: "6", orderByFields: oid, resultOffset: o, resultRecordCount: size, f: "geojson" });
+  const pages = await Promise.all(offsets.map(o => getJson(`${L}/query?${q(o)}`)));
+  const raw = pages.flatMap(p => p.features || []);
+  if (raw.length < count) throw new Error(`Only ${fmt(raw.length)} of ${fmt(count)} lots came back`);
+  const fc = buildParcels(raw);
+  fc.metadata = { edited, count: fc.features.length, fields: fields.length ? fields : Object.keys(raw[0]?.properties || {}).filter(k => k !== oid).map(n => ({ name: n, alias: n })) };
+  idb.set("parcels", { key, fc });
+  return fc;
+}
+function buildParcels(raw) {
+  const items = [], seen = new Set();
+  for (const f of raw) {
+    const g = f.geometry; if (!g || (g.type !== "Polygon" && g.type !== "MultiPolygon")) continue;
+    const p = f.properties || {}, id = normId(p[CONFIG.idField]); if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const [cx, cy] = centroid(g), city = { ...p }; delete city.OBJECTID;
+    items.push({ addr: parseAddress(p[CONFIG.addressField]), f: { type: "Feature", geometry: g, properties: { id, d: displayId(String(p[CONFIG.idField]).trim()), a: "", cx: +cx.toFixed(6), cy: +cy.toFixed(6), city } } });
+  }
+  const cell = 0.002, grid = new Map(), gk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
+  for (const it of items) if (it.addr?.full) { const k = gk(it.f.properties.cx, it.f.properties.cy); grid.has(k) ? grid.get(k).push(it) : grid.set(k, [it]); }
+  for (const it of items) {
+    const P = it.f.properties, a = it.addr;
+    if (a?.full) { P.a = a.full; continue; }
+    if (a?.street) { P.a = `Lot on ${a.street}`; continue; }
+    const kx = Math.cos(P.cy * Math.PI / 180), gx = Math.floor(P.cx / cell), gy = Math.floor(P.cy / cell);
+    let best = null, bd = Infinity;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const b of grid.get(`${gx + dx},${gy + dy}`) || []) {
+      const q = b.f.properties, d = ((q.cx - P.cx) * kx) ** 2 + (q.cy - P.cy) ** 2; if (d < bd) { bd = d; best = b; }
+    }
+    const meters = best ? Math.sqrt(bd) * 111320 : Infinity;
+    P.a = meters < 400 ? `${meters < 60 ? "Next to" : "Near"} ${best.addr.full}` : `Parcel ${P.d}`;
+  }
+  return { type: "FeatureCollection", features: items.map(it => it.f) };
+}
+function titleCase(s) {
+  return String(s).toLowerCase().split(/\s+/).filter(Boolean).map(w =>
+    /^\d+(st|nd|rd|th)$/.test(w) ? w : /^\d/.test(w) || /^(n|s|e|w|ne|nw|se|sw)$/.test(w) ? w.toUpperCase()
+    : w.replace(/(^|['-])([a-z])/g, (_, x, y) => x + y.toUpperCase()).replace(/^Mc([a-z])/, (_, y) => "Mc" + y.toUpperCase())).join(" ");
+}
+function parseAddress(raw) {
+  const s = String(raw ?? "").split(",")[0].replace(/\s+/g, " ").trim();
+  if (!s || /^(null|none|n\/a|0)$/i.test(s)) return null;
+  const m = s.match(/^(\d+[A-Za-z]?(?:-\d+[A-Za-z]?)?)\s+(.+)$/);
+  if (m) return /^0+$/.test(m[1]) ? { street: titleCase(m[2]) } : { full: titleCase(`${m[1]} ${m[2]}`), street: titleCase(m[2]) };
+  if (/\d/.test(s) && !/[A-Za-z]{2,}/.test(s)) return null;
+  return { street: titleCase(s) };
+}
+function centroid(g) {
+  let x = 0, y = 0, n = 0;
+  for (const r of g.type === "Polygon" ? [g.coordinates[0]] : g.coordinates.map(p => p[0])) for (let i = 0; i < r.length - 1; i++) { x += r[i][0]; y += r[i][1]; n++; }
+  return n ? [x / n, y / n] : [0, 0];
+}
+
+/* =====================================================================
+   App state and routing
+   ===================================================================== */
+const S = {
+  fc: null, byId: new Map(), ids: [], fields: [], parcelsError: null,
+  info: null, code: null, voter: null, batch: null, budgets: null,
+  tally: new Map(), mine: new Map(), max: 0, choice: ls.get("lpv:choice") || null,
+  view: "everyone", mode: "map", sel: null, me: null, listQuery: "", listSort: "votes", located: false
+};
+if (!CH[S.choice]) S.choice = null;
+let parcelsReady = null, gl = null;
+
+function route() {
+  const h = location.hash.replace(/^#\/?/, ""), parts = h.split("?")[0].split("/").filter(Boolean);
+  closeCard();
+  if (!parts.length) return showMap(null);
+  if (parts[0] === "lot" && parts[1]) return showMap(normId(parts[1]));
+  if (parts[0] === "about") return showAbout();
+  if (parts[0] === "organizer") return showOrganizer();
+  if (parts[0] === "join" && parts[1]) return joinLink(parts[1]);
+  location.hash = "";
+}
+// A passkey card's QR code opens #/join/<passkey>: save the passkey and go straight to the map.
+async function joinLink(code) {
+  try { await Store.join(code); myKey.set(normCode(code)); history.replaceState(null, "", "#/"); route(); }
+  catch (e) { setPage(`<main class="page"><a class="back" href="#/">← The map</a><h1>That passkey didn't work</h1><p class="lead">${esc(errText(e))}</p></main>`); }
+}
+function setPage(html) {
+  document.body.classList.remove("on-map"); $("#map").hidden = true; clearInterval(liveTimer);
+  $("#app").innerHTML = html; window.scrollTo(0, 0);
+}
+
+/* ------------------------------------------------------------------ about */
+async function showAbout() {
+  let info; try { info = await Store.info(); } catch (e) { return setPage(`<main class="page"><a class="back" href="#/">← The map</a><h1>${esc(CONFIG.title)}</h1><p class="lead">${esc(errText(e))}</p><button class="btn" onclick="route()">Try again</button></main>`); }
+  setPage(`<main class="page">
+    <a class="back" href="#/">← The map</a>
+    <h1>${esc(CONFIG.title)}</h1>
+    <p class="lead">The City of Cleveland's land bank holds thousands of vacant lots, and the city runs programs to put them back to use. This map asks, lot by lot, which of those each one should become, so the people who live with this land can speak directly to the programs that decide it.</p>
+    <h2>The three choices</h2>
+    <div class="prog">${CHOICES.map(c => `<div class="p"><i style="background:${c.ramp[3]}"></i><b>${esc(c.label)}</b><div>${esc(c.about)}</div></div>`).join("")}</div>
+    <h2>How voting works</h2>
+    <p>Voters get a passkey from the organizer, usually after a training or a meeting. Each passkey comes with a set number of votes for each choice. A voter picks a choice at the bottom of the map and taps a lot to vote for it, one lot at a time. Each lot gets one vote per voter; tapping it again takes the vote back, and picking another choice changes it.</p>
+    <p>Every vote is public as soon as it's cast. Each lot takes the color of the choice with the most votes, and darker colors mean more votes. No names or locations are kept; voters are numbers.</p>
+    <h2>Turnout</h2>
+    <div class="panel">
+      <div><b>${fmt(info.used)}</b> of ${plural(info.issued, "passkey", "passkeys")} used · <b>${fmt(info.votes)}</b> ${info.votes === 1 ? "vote" : "votes"} on ${plural(info.lots, "lot", "lots")}</div>
+      <div class="muted" style="font-size:14px;margin-top:4px">${CHOICES.map(c => `${esc(c.label)} ${fmt(info.by[c.key])}`).join(" · ")}</div>
+      ${info.batches.length ? `<table class="t" style="margin-top:12px"><thead><tr><th>Batch</th><th>Votes per voter</th><th>Used</th></tr></thead><tbody>
+        ${info.batches.map(b => `<tr><td>${esc(b.label)}<div class="muted" style="font-size:12.5px">${fmtDate(b.created_at)}</div></td><td>${esc(budgetText(b.budgets))}</td><td class="num">${fmt(b.used)} of ${fmt(b.issued)}</td></tr>`).join("")}
+      </tbody></table>` : `<div class="muted" style="font-size:14px;margin-top:8px">No passkeys issued yet.</div>`}
+    </div>
+    <h2>The record</h2>
+    <p>Anyone can download it. <button class="link" data-dl>Every vote (CSV)</button> · <button class="link" data-dlt>Totals by lot (CSV)</button></p>
+    <p class="muted" style="font-size:14.5px">A companion to the <a href="${esc(CONFIG.mainTool)}">Public Land Voting Tool</a>, where coalitions ask their own questions of the same lots.</p>
+    <div class="tools no-print">
+      <a class="link" href="#/organizer">Organizer: issue passkeys</a>
+      ${PROTOTYPE ? `<div style="margin-top:12px"><b style="color:var(--ink)">Prototype.</b> Everything here is saved in this browser only.</div>
+      <div class="row" style="margin-top:6px;gap:4px 14px">
+        <button class="link" data-sample>Add sample votes</button>
+        <button class="link" data-export>Save the whole record (JSON)</button>
+        <label class="link" style="cursor:pointer">Load a saved record<input type="file" accept=".json,application/json" data-import hidden></label>
+        <button class="link" data-reset>Erase everything</button>
+      </div>` : ""}
+      ${S.parcelsError ? `<div class="form-msg">The city's lots didn't load: ${esc(S.parcelsError)}</div>` : ""}
+    </div>
+  </main>`);
+  $("[data-dl]").onclick = () => downloadVotes();
+  $("[data-dlt]").onclick = () => downloadTotals();
+  if (!PROTOTYPE) return;
+  $("[data-export]").onclick = () => downloadFile(`land-bank-program-vote-record-${new Date().toISOString().slice(0, 10)}.json`, Store.exportAll(), "application/json");
+  $("[data-import]").onchange = async e => { try { Store.importAll(await e.target.files[0].text()); toast("Record loaded."); showAbout(); } catch (err) { toast(err.message, { error: true }); } };
+  $("[data-reset]").onclick = () => { if (confirm("Erase every passkey and vote saved in this browser?")) { Store.reset(); myKey.del(); orgKey = null; showAbout(); } };
+  $("[data-sample]").onclick = async e => { e.target.disabled = true; e.target.textContent = "Adding…"; try { await addSamples(); showAbout(); toast("Added a sample batch with invented votes."); } catch (err) { toast(errText(err), { error: true }); e.target.disabled = false; } };
+}
+const stamp = () => new Date().toISOString().slice(0, 10);
+const disp = p => S.byId.get(p)?.properties.d || displayId(p), label = p => S.byId.get(p)?.properties.a || "";
+async function downloadVotes() {
+  try {
+    const rows = await Store.record();
+    downloadFile(`land-bank-program-votes-${stamp()}.csv`, csv([["parcel", "label", "choice", "voter", "batch", "voted_at"],
+      ...rows.map(r => [disp(r.parcel), label(r.parcel), CH[r.choice].label, r.voter, r.batch, r.at])]), "text/csv");
+  } catch (e) { toast(errText(e), { error: true }); }
+}
+async function downloadTotals() {
+  try {
+    const t = await Store.tally(), rows = [...t].map(([p, n]) => [disp(p), label(p), ...n, n[0] + n[1] + n[2], leadLabel(n)]).sort((a, b) => b[5] - a[5]);
+    downloadFile(`land-bank-program-totals-${stamp()}.csv`, csv([["parcel", "label", ...CHOICES.map(c => c.key), "total", "leading"], ...rows]), "text/csv");
+  } catch (e) { toast(errText(e), { error: true }); }
+}
+
+/* ------------------------------------------------ organizer: passkeys */
+async function showOrganizer() {
+  if (!orgKey) {
+    const fresh = PROTOTYPE && !(await Store.info()).organizer;
+    setPage(`<main class="page"><a class="back" href="#/">← The map</a><h1>Passkeys</h1>
+      <p class="lead">For the organizer. Passkeys are issued in labeled batches, and each batch sets how many votes its voters get for each choice.</p>
+      ${fresh ? `<div class="panel"><p style="margin:0 0 10px">This prototype doesn't have an organizer key yet.</p><button class="btn btn-dark" data-setup>Make an organizer key</button></div>` : `
+      <form class="panel" data-unlock><label for="k" style="font-weight:600">Organizer key</label><div class="join"><input class="text" id="k" autocomplete="off" autocapitalize="none" placeholder="three words"><button class="btn btn-dark">Open</button></div><div class="form-msg" data-msg hidden></div>
+      <p class="muted" style="font-size:14px;margin:10px 0 0">The three-word key was shown once, when the database was set up.</p></form>`}</main>`);
+    $("[data-setup]")?.addEventListener("click", () => { orgKey = Store.setupOrg(); S.freshKey = orgKey; showOrganizer(); });
+    $("[data-unlock]")?.addEventListener("submit", async e => { e.preventDefault(); const v = $("#k").value; try { await Store.orgCheck(v); orgKey = v; showOrganizer(); } catch (err) { const msg = $("[data-msg]"); msg.textContent = errText(err); msg.hidden = false; } });
+    return;
+  }
+  let batches; try { batches = await Store.orgBatches(orgKey); } catch (e) { orgKey = null; toast(errText(e), { error: true }); return showOrganizer(); }
+  const fresh = S.freshKey; S.freshKey = null;
+  const here = location.href.split("#")[0], joinUrl = c => `${here}#/join/${c}`;
+  setPage(`<main class="page">
+    <div class="no-print">
+      <a class="back" href="#/">← The map</a>
+      <h1>Passkeys</h1>
+      <p class="lead">Each passkey is one voter. Hand them out however your vetting and training process decides; the map only checks the passkey.</p>
+      ${fresh ? `<div class="panel" style="margin-bottom:12px"><div style="font-weight:650">Your organizer key</div><div class="key-box"><b>${esc(fresh)}</b></div><p class="muted" style="font-size:14px;margin:0">Keep it. It's the only way back to this page.</p></div>` : ""}
+      <form class="panel" data-new>
+        <div style="font-weight:650;font-size:16.5px">Issue a new batch</div>
+        <div class="grid2">
+          <div class="field"><label for="b-l">Label</label><input class="text" id="b-l" maxlength="80" required placeholder="Hough training, Oct 12"><div class="hint">Public, so turnout can be read by batch. Don't use names.</div></div>
+          <div class="field"><label for="b-n">Passkeys</label><input class="text" id="b-n" type="number" min="1" max="1000" value="25" required></div>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>Votes per voter for each choice</label></div>
+        <div class="grid3">${CHOICES.map(c => `<div><label for="b-${c.key}" style="display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:5px"><i style="width:11px;height:11px;border-radius:3px;background:${c.ramp[3]}"></i>${esc(c.label)}</label><input class="text" id="b-${c.key}" type="number" min="0" max="100" value="5" required></div>`).join("")}</div>
+        <div class="hint muted" style="font-size:13.5px;margin-top:6px">Fewer votes make voters choose. Set a choice to 0 to leave it out of this batch.</div>
+        <div class="row" style="margin-top:16px"><button class="btn btn-dark">Issue passkeys</button></div>
+      </form>
+      <h2>Batches</h2>
+      ${batches.length ? batches.map(b => { const used = b.keys.filter(k => k.used_at).length; return `<div class="panel batch" data-batch="${b.id}">
+        <div class="bh"><div><div class="bl">${esc(b.label)}</div><div class="bm">${esc(budgetText(b.budgets))} votes each · ${fmt(used)} of ${plural(b.keys.length, "passkey", "passkeys")} used · ${fmtDate(b.created_at)}</div></div>
+          <div class="row"><button class="btn btn-sm btn-dark" data-print>Print passkey cards</button><button class="btn btn-sm" data-csv>Download</button></div></div>
+        <form class="row" data-add style="margin-top:10px"><label class="muted" style="font-size:14px" for="add-${b.id}">Add</label><input class="text" id="add-${b.id}" type="number" min="1" max="1000" value="5" style="width:84px;min-height:38px"><button class="btn btn-sm">more to this batch</button></form>
+        <details><summary>Show passkeys</summary><table class="t"><thead><tr><th>Voter</th><th>Passkey</th><th>Status</th></tr></thead><tbody>
+          ${b.keys.map(k => `<tr><td>${k.voter}</td><td class="code">${showCode(k.code)}</td><td>${k.used_at ? `Voted ${fmtDate(k.used_at)}` : `<span class="muted">Not used</span>`}</td></tr>`).join("")}
+        </tbody></table></details></div>`; }).join("") : `<div class="muted">No batches yet.</div>`}
+    </div>
+    <div class="cards" data-cards hidden></div>
+  </main>`);
+  $("[data-new]").onsubmit = async e => {
+    e.preventDefault();
+    const btn = $("[data-new] .btn-dark"); btn.disabled = true; btn.textContent = "Issuing…";
+    const budgets = Object.fromEntries(CHOICES.map(c => [c.key, Math.max(0, Math.min(100, Math.round(+$(`#b-${c.key}`).value || 0)))]));
+    try { const r = await Store.newBatch(orgKey, { label: $("#b-l").value.trim(), n: Math.max(1, Math.min(1000, +$("#b-n").value || 1)), budgets }); toast(`Issued ${plural(r.keys.length, "passkey", "passkeys")}.`); showOrganizer(); }
+    catch (err) { toast(errText(err), { error: true, ms: 6000 }); btn.disabled = false; btn.textContent = "Issue passkeys"; }
+  };
+  for (const b of batches) {
+    const el = $(`[data-batch="${b.id}"]`);
+    $("[data-csv]", el).onclick = () => downloadFile(`passkeys-${b.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.csv`, csv([["voter", "passkey", "batch", "used_at"], ...b.keys.map(k => [k.voter, showCode(k.code), b.label, k.used_at || ""])]), "text/csv");
+    $("[data-add]", el).onsubmit = async e => { e.preventDefault(); const n = Math.max(1, Math.min(1000, +$(`#add-${b.id}`).value || 1)); try { await Store.addKeys(orgKey, b.id, n); toast(`Added ${plural(n, "passkey", "passkeys")}.`); showOrganizer(); } catch (err) { toast(errText(err), { error: true }); } };
+    $("[data-print]", el).onclick = async e => {
+      const btn = e.currentTarget, c = $("[data-cards]"), unused = b.keys.filter(k => !k.used_at);
+      if (!unused.length) return toast("Every passkey in this batch has been used.");
+      c.innerHTML = unused.map(k => `<div class="invite"><div class="iq">${esc(CONFIG.title)}</div><div class="ib">${esc(b.label)}</div><div class="ic">${showCode(k.code)}</div>
+        <div class="it">Your votes: ${esc(budgetText(b.budgets))}. Scan to vote, or open the address below and enter this passkey.<br>${esc(here)}</div><div class="qr" data-qr="${esc(joinUrl(k.code))}"></div></div>`).join("");
+      if (!window.qrcode) { btn.disabled = true; btn.textContent = "Preparing cards…"; try { await loadScript(QR_JS); } catch {} btn.disabled = false; btn.textContent = "Print passkey cards"; }
+      if (window.qrcode) $$("[data-qr]", c).forEach(q => { const r = qrcode(0, "M"); r.addData(q.dataset.qr); r.make(); q.innerHTML = r.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); });
+      c.hidden = false; window.print(); c.hidden = true;
+    };
+  }
+}
+
+/* =====================================================================
+   The map
+   ===================================================================== */
+async function showMap(lot) {
+  document.body.classList.add("on-map");
+  $("#app").innerHTML = `<header class="head" data-head></header><section class="member" data-member aria-label="Your votes"></section>
+    <button class="locate" data-locate aria-label="Center the map on me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.2"/></svg></button>
+    <div class="list" data-list hidden></div><aside class="card" data-card hidden aria-label="Lot"></aside>`;
+  $("[data-locate]").onclick = () => locate(true);
+  S.code = myKey.get(); S.voter = null;
+  if (S.code) {
+    try { const r = await Store.join(S.code); S.voter = r.voter; S.batch = r.batch; S.budgets = r.budgets; if (S.choice && !S.budgets[S.choice]) S.choice = null; }
+    catch (e) { if (String(e.message) === "key_not_found") myKey.del(); else toast(errText(e), { error: true }); S.code = null; }
+  }
+  try { await refresh(); } catch (e) { return setPage(`<main class="page"><h1>${esc(CONFIG.title)}</h1><p class="lead">${esc(errText(e))}</p><button class="btn" onclick="route()">Try again</button></main>`); }
+  renderHead(); renderMember();
+  if (!S.fc) {
+    $("[data-head]").insertAdjacentHTML("beforeend", `<div class="terms" data-wait>Loading the city's lots…</div>`);
+    try { await parcelsReady; } catch {}
+    $("[data-wait]")?.remove();
+    if (!S.fc) { toast(`The city's lots didn't load. ${S.parcelsError || ""}`, { error: true, ms: 8000 }); return; }
+  }
+  await ensureMap();
+  $("#map").hidden = false; gl.resize();
+  painted.clear(); paintAll(); applyView();
+  if (S.mode === "list") renderList();
+  if (lot && S.byId.has(lot)) { flyTo(lot); openCard(lot); }
+  else if (!S.located && matchMedia("(pointer: coarse)").matches) { S.located = true; locate(false); }   // on phones, start where the voter is
+  startLive();
+}
+let liveTimer = 0, liveBusy = false;
+function startLive() {
+  clearInterval(liveTimer); if (PROTOTYPE) return;
+  liveTimer = setInterval(async () => {
+    if (document.hidden || liveBusy || !document.body.classList.contains("on-map")) return;
+    liveBusy = true;
+    try { const before = S.info.votes; await refresh(); paintAll(); renderHead(); if (S.code) renderMember(); if (S.mode === "list") renderList();
+          if (S.sel && S.info.votes !== before && !$("[data-card] .vote-msg.bad")) openCard(S.sel); }
+    catch {} finally { liveBusy = false; }
+  }, CONFIG.refreshSeconds * 1000);
+}
+async function refresh() {
+  [S.tally, S.mine, S.info] = await Promise.all([Store.tally(), S.code ? Store.mine(S.code) : new Map(), Store.info()]);
+  S.max = 0; for (const n of S.tally.values()) S.max = Math.max(S.max, n[0] + n[1] + n[2]);
+}
+const counts = id => S.tally.get(id) || [0, 0, 0];
+const total = n => n[0] + n[1] + n[2];
+const level = id => { const t = total(counts(id)); return t ? Math.max(1, Math.ceil(5 * t / (S.max || 1))) : 0; };
+// Which choice leads on a lot: its key, "tie", or null with no votes.
+function leading(n) { const t = total(n); if (!t) return null; const top = Math.max(...n); return n.filter(x => x === top).length > 1 ? "tie" : CHOICES[n.indexOf(top)].key; }
+const leadLabel = n => { const l = leading(n); return l === "tie" ? "Tie" : l ? CH[l].label : ""; };
+const colorOf = id => { const l = leading(counts(id)), c = level(id); return !l ? "#FFFFFF" : (l === "tie" ? TIE : CH[l].ramp)[c - 1]; };
+const used = k => { let n = 0; for (const c of S.mine.values()) if (c === k) n++; return n; };
+const left = k => Math.max(0, (S.budgets?.[k] || 0) - used(k));
+
+function renderHead() {
+  const el = $("[data-head]"); if (!el) return;
+  const i = S.info;
+  el.innerHTML = `<div class="top"><span class="name">${esc(CONFIG.title)}</span><div class="row" style="gap:12px"><a class="link quiet" href="#/about">About</a><button class="link quiet" data-dl>Download votes</button></div></div>
+    <h1>${esc(CONFIG.question)}</h1>
+    <div class="terms"><span><b>${fmt(i.used)}</b> of ${plural(i.issued, "voter", "voters")} voted</span><span><b>${fmt(i.votes)}</b> ${i.votes === 1 ? "vote" : "votes"} on ${plural(i.lots, "lot", "lots")}</span>
+      ${CHOICES.map(c => `<span>${esc(c.label)} <b>${fmt(i.by[c.key])}</b></span>`).join("")}</div>
+    <div class="ctl"><div class="seg" role="group" aria-label="Whose votes"><button data-view="everyone" aria-pressed="${S.view === "everyone"}">Everyone</button><button data-view="mine" aria-pressed="${S.view === "mine"}">Mine</button></div>
+      <div class="seg" role="group" aria-label="Show as"><button data-mode="map" aria-pressed="${S.mode === "map"}">Map</button><button data-mode="list" aria-pressed="${S.mode === "list"}">List</button></div></div>
+    <div class="legend">${CHOICES.map(c => `<span><i style="background:${c.ramp[3]}"></i>${esc(c.label)}</span>`).join("")}
+      ${S.view === "mine" ? `<span><i class="none"></i>Not yours</span>` : `<span><i style="background:${TIE[3]}"></i>Tie</span><span><i class="none"></i>No votes</span><span>Darker: more votes</span>`}</div>`;
+  $$("[data-view]", el).forEach(b => b.onclick = () => { S.view = b.dataset.view; renderHead(); applyView(); if (S.mode === "list") renderList(); });
+  $$("[data-mode]", el).forEach(b => b.onclick = () => { S.mode = b.dataset.mode; renderHead(); applyView(); });
+  $("[data-dl]", el).onclick = () => downloadVotes();
+  document.documentElement.style.setProperty("--list-top", `${el.offsetHeight + 24}px`);
+}
+
+// The bottom of the screen: the passkey box, or the three choices with the votes left in each.
+function choiceButtons(cur, where) {
+  return `<div class="choices" role="group" aria-label="Choice">${CHOICES.map(c => {
+    const b = S.budgets[c.key], l = left(c.key), off = !b || (where === "card" && !l && cur !== c.key);
+    return `<button class="choice c-${c.key}" data-choice="${c.key}" aria-pressed="${cur === c.key}" ${off ? "disabled" : ""}>
+      <span class="cl">${esc(c.label)}</span><span class="cn"><i></i>${b ? `${fmt(l)} of ${fmt(b)} left` : "Not included"}</span></button>`; }).join("")}</div>`;
+}
+function renderMember() {
+  const el = $("[data-member]"); if (!el) return;
+  if (!S.code) {
+    el.innerHTML = `<div style="font-weight:650">Anyone can look. Voters use a passkey.</div>
+      <form class="join" data-join style="margin-top:6px"><label class="sr" for="m-code">Passkey</label><input class="text code-input" id="m-code" placeholder="Passkey" autocomplete="off" autocapitalize="characters" spellcheck="false" style="min-height:42px"><button class="btn btn-dark btn-sm" style="min-height:42px">Vote</button></form>
+      <div class="form-msg" data-msg hidden></div>`;
+    $("[data-join]", el).onsubmit = async e => {
+      e.preventDefault(); const msg = $("[data-msg]", el), raw = $("#m-code", el).value; msg.hidden = true;
+      try {
+        const r = await Store.join(raw);
+        myKey.set(normCode(raw)); S.code = normCode(raw); S.voter = r.voter; S.batch = r.batch; S.budgets = r.budgets;
+        if (S.choice && !S.budgets[S.choice]) S.choice = null;
+        await refresh(); paintAll(); renderHead(); renderMember(); if (S.sel) openCard(S.sel); if (S.mode === "list") renderList();
+        toast(`You're voter ${r.voter}. Pick a choice, then tap lots.`);
+      } catch (err) { msg.textContent = errText(err); msg.hidden = false; }
+    };
+  } else {
+    el.innerHTML = `<div class="who"><div><b>Voter ${S.voter}</b> <span class="muted">· ${esc(S.batch)}</span></div>
+      <button class="link quiet" data-leave>Not you?</button></div>
+      ${choiceButtons(S.choice, "bar")}
+      <div class="hint">${S.choice ? `Tap a lot to vote ${esc(lower(S.choice))}. Tap it again to take the vote back.` : "Pick a choice, then tap lots to vote. With nothing picked, tapping a lot just opens it."}</div>`;
+    $$("[data-choice]", el).forEach(b => b.onclick = () => { pick(S.choice === b.dataset.choice ? null : b.dataset.choice); });
+    $("[data-leave]", el).onclick = () => { myKey.del(); S.code = S.voter = S.budgets = null; S.mine = new Map(); paintAll(); renderMember(); if (S.sel) openCard(S.sel); };
+  }
+  document.documentElement.style.setProperty("--member-h", `${el.offsetHeight}px`);
+}
+function pick(k) { S.choice = k; k ? ls.set("lpv:choice", k) : ls.del("lpv:choice"); renderMember(); }
+
+/* --- voting: pick a choice, then tap a lot; tap it again to take the vote back --- */
+let lastTap = { id: null, t: 0 };
+async function tapLot(id) {
+  const now = Date.now();
+  if (lastTap.id === id && now - lastTap.t < 700) return;   // a double tap counts once
+  lastTap = { id, t: now };
+  if (!S.code || !S.choice) return openCard(id);
+  const cur = S.mine.get(id), k = S.choice;
+  if (cur === k) return takeBack(id);
+  if (!S.budgets[k]) return openCard(id, { text: `Your passkey doesn't include ${lower(k)} votes.`, bad: true });
+  if (!left(k)) return openCard(id, { text: `You've used all ${plural(S.budgets[k], lower(k) + " vote", lower(k) + " votes")}. Tap one of those lots to take a vote back, or pick another choice.`, bad: true });
+  return castVote(id, k);
+}
+async function castVote(id, k) {
+  const cur = S.mine.get(id);
+  try {
+    await Store.vote(S.code, id, k);
+    await afterVote(id);
+    toast(cur ? `Changed to ${lower(k)}.` : `Voted ${lower(k)}. It's public now.`);
+  } catch (err) { await openCard(id, { text: errText(err), bad: true }); }
+}
+async function takeBack(id) {
+  try { await Store.unvote(S.code, id); await afterVote(id); toast("Vote taken back."); }
+  catch (err) { await openCard(id, { text: errText(err), bad: true }); }
+}
+async function afterVote(id) { await refresh(); paintAll(); renderHead(); renderMember(); openCard(id); if (S.mode === "list") renderList(); }
+
+/* --- the parcel card: one lot at a time --- */
+let cardSeq = 0;
+async function openCard(id, note) {
+  const el = $("[data-card]"); if (!el || !S.byId.has(id)) return;
+  const seq = ++cardSeq;
+  if (S.sel && S.sel !== id) setSel(S.sel, false);
+  S.sel = id; setSel(id, true);
+  const p = S.byId.get(id).properties, n = counts(id), t = total(n), cur = S.mine.get(id), lead = leading(n);
+  const others = await Store.lotMaps(id);
+  if (seq !== cardSeq) return;
+  let action = "", hint;
+  if (!S.code) { action = `<button class="btn btn-block" data-focus-code>Enter your passkey to vote</button>`; hint = "Anyone can look. Voters with a passkey vote by tapping lots."; }
+  else {
+    action = `${cur ? `<div class="voted"><span>✓ You voted ${esc(lower(cur))}</span><button class="link quiet" data-unvote>Take back</button></div>` : ""}${choiceButtons(cur, "card")}`;
+    const k = cur || S.choice;
+    hint = k ? CH[k].about : "Pick what this lot should become.";
+  }
+  action += `<div class="vote-msg${note?.bad ? " bad" : ""}">${esc(note ? note.text : hint)}</div>`;
+  const val = v => v === null || v === undefined || String(v).trim() === "" ? null : typeof v === "number" ? fmt(v) : String(v);
+  el.innerHTML = `<div class="grab"></div>
+    <div class="ch"><div><h2>${esc(p.a)}</h2><div class="pin">${esc(p.d)}</div></div><button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <h3>Votes on this lot</h3>
+    <div class="mix">${CHOICES.map((c, i) => `<span class="lab"><i style="background:${c.ramp[3]}"></i>${esc(c.label)}</span><span class="bar"><i style="width:${t ? Math.round(100 * n[i] / Math.max(...n)) : 0}%;background:${c.ramp[3]}"></i></span><span class="n">${fmt(n[i])}</span>`).join("")}</div>
+    <div class="lead-line">${!t ? "No votes yet." : lead === "tie" ? `Tied, with ${plural(t, "vote", "votes")} in all.` : `Leading: <b style="color:var(--ink)">${esc(CH[lead].label)}</b>, with ${fmt(n[CH[lead].n - 1])} of ${plural(t, "vote", "votes")}.`}</div>
+    <div style="margin-top:14px">${action}</div>
+    <h3>The city's record</h3>
+    <dl class="city">${S.fields.map(f => { const v = val(p.city[f.name]); return `<dt>${esc(f.alias)}</dt><dd class="${v === null ? "blank" : ""}">${v === null ? "Blank" : esc(v)}</dd>`; }).join("")}</dl>
+    ${PROTOTYPE ? "" : `<h3>On Public Land Voting Tool maps</h3>
+    <div class="others">${others.length ? others.map(o => `<a href="${esc(CONFIG.mainTool)}#/m/${o.id}?lot=${id}"><div class="oq">${esc(o.question)}</div><div class="on">${plural(o.votes, "vote", "votes")}${o.steward ? ` · ${esc(o.steward)}` : ""} →</div></a>`).join("")
+      : `<div class="muted" style="font-size:14px">No votes on this lot on any coalition map yet.</div>`}</div>`}`;
+  el.hidden = false; document.body.classList.add("card-open");
+  keepInView(id);
+  $("[data-close]", el).onclick = () => closeCard();
+  $("[data-focus-code]", el)?.addEventListener("click", () => { closeCard(); $("#m-code")?.focus(); });
+  $("[data-unvote]", el)?.addEventListener("click", () => takeBack(id));
+  $$("[data-choice]", el).forEach(b => b.onclick = () => { const k = b.dataset.choice; if (k === cur) return; pick(k); b.disabled = true; castVote(id, k); });
+}
+function closeCard() {
+  cardSeq++;
+  const el = $("[data-card]"); if (el) el.hidden = true; document.body.classList.remove("card-open");
+  if (S.sel && gl) setSel(S.sel, false);
+  S.sel = null;
+}
+function position() {
+  return new Promise((ok, no) => {
+    if (!navigator.geolocation) return no(new Error("This browser can't share its location."));
+    navigator.geolocation.getCurrentPosition(p => { S.me = [p.coords.longitude, p.coords.latitude]; showMe(); ok(S.me); },
+      e => no(new Error(e.code === 1 ? "Location is turned off for this page." : "Couldn't find where you are. Try again outside or near a window.")),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+  });
+}
+async function locate(loud) {
+  try { const me = await position(); gl.flyTo({ center: me, zoom: Math.max(gl.getZoom(), 16.5), duration: 900 }); }
+  catch (e) { if (loud) toast(e.message, { error: true, ms: 5000 }); }
+}
+
+/* --- list view: every lot, including the ones without addresses --- */
+function renderList() {
+  const el = $("[data-list]"); if (!el) return;
+  el.hidden = S.mode !== "list"; if (el.hidden) return;
+  const q = S.listQuery.trim().toLowerCase(), qn = normId(q);
+  let ids = S.ids;
+  if (S.view === "mine") ids = ids.filter(id => S.mine.has(id));
+  if (q) ids = ids.filter(id => { const p = S.byId.get(id).properties; return p.a.toLowerCase().includes(q) || (qn && p.id.includes(qn)); });
+  const az = (a, b) => S.byId.get(a).properties.a.localeCompare(S.byId.get(b).properties.a, undefined, { numeric: true });
+  const ci = CH[S.listSort] ? CH[S.listSort].n - 1 : -1;
+  const by = S.listSort === "az" ? az : ci >= 0 ? (a, b) => counts(b)[ci] - counts(a)[ci] || az(a, b) : (a, b) => total(counts(b)) - total(counts(a)) || az(a, b);
+  const sorted = [...ids].sort(by), shown = sorted.slice(0, CONFIG.listLimit);
+  const keep = document.activeElement?.id === "l-q";
+  const opts = [["votes", "Most votes"], ...CHOICES.map(c => [c.key, `Most ${lower(c.key)}`]), ["az", "A to Z"]];
+  el.innerHTML = `<div class="list-inner"><div class="bar"><label class="sr" for="l-q">Search lots</label><input class="text" id="l-q" placeholder="Street, address, or parcel number" value="${esc(S.listQuery)}" autocomplete="off">
+      <select id="l-s" aria-label="Sort">${opts.map(([v, t]) => `<option value="${v}" ${S.listSort === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+    ${shown.map(id => { const p = S.byId.get(id).properties, n = counts(id), mine = S.mine.get(id);
+      return `<button class="lot" data-lot="${id}"><div><div class="ll">${esc(p.a)}</div><div class="lp">${esc(p.d)}${p.city.cityLandBankType ? " · " + esc(p.city.cityLandBankType) : ""}${mine ? ` · <b style="color:var(--ink)">You: ${esc(lower(mine))}</b>` : ""}</div></div>
+        <div class="lv" aria-label="${CHOICES.map((c, i) => `${c.label} ${n[i]}`).join(", ")}">${CHOICES.map((c, i) => `<span class="${n[i] ? "" : "zero"}"><i style="background:${c.ramp[3]}"></i>${fmt(n[i])}</span>`).join("")}</div></button>`; }).join("")}
+    <div class="more">${sorted.length ? `Showing ${fmt(shown.length)} of ${plural(sorted.length, "lot", "lots")}.${sorted.length > shown.length ? " Search to narrow it down." : ""}` : S.view === "mine" ? "You haven't voted yet." : "No lots match."}</div></div>`;
+  const qi = $("#l-q", el); qi.oninput = () => { S.listQuery = qi.value; renderList(); };
+  if (keep) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+  $("#l-s", el).onchange = e => { S.listSort = e.target.value; renderList(); };
+  $$("[data-lot]", el).forEach(b => b.onclick = () => { const id = b.dataset.lot; S.mode = "map"; renderHead(); applyView(); flyTo(id); openCard(id); });
+}
+
+/* --- drawing the map --- */
+// Feature state per lot: k = leading choice (1-3, 4 tie, 0 none), c = darkness (0-5), m = my choice (1-3, 0 none).
+const painted = new Map();
+function fsSet(id, st) { gl.setFeatureState({ source: "parcels", id }, st); gl.setFeatureState({ source: "pts", id }, st); }
+function paint(id) {
+  const l = leading(counts(id)), k = !l ? 0 : l === "tie" ? 4 : CH[l].n, c = level(id), m = S.mine.has(id) ? CH[S.mine.get(id)].n : 0, key = k * 100 + c * 10 + m;
+  if (painted.get(id) !== key) { painted.set(id, key); fsSet(id, { k, c, m }); }
+}
+function paintAll() { if (gl) for (const id of S.ids) paint(id); }
+function setSel(id, on) { if (gl) fsSet(id, { s: on }); }
+function applyView() {
+  if (!gl) return;
+  const k = ["coalesce", ["feature-state", "k"], 0], c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0];
+  const ramps = [...CHOICES.map(x => x.ramp), TIE];
+  const pairs = ramps.flatMap((r, ki) => r.flatMap((col, ci) => [(ki + 1) * 10 + ci + 1, col]));
+  const fill = S.view === "mine" ? ["match", m, ...CHOICES.flatMap((x, i) => [i + 1, x.ramp[3]]), "#FFFFFF"] : ["match", ["+", ["*", k, 10], c], ...pairs, "#FFFFFF"];
+  const op = S.view === "mine" ? ["match", m, 0, 0.3, 0.92] : ["match", c, 0, 0.35, 0.92];
+  gl.setPaintProperty("lots-fill", "fill-color", fill); gl.setPaintProperty("lots-fill", "fill-opacity", op);
+  gl.setPaintProperty("lots-dots", "circle-color", fill);
+  renderList();
+}
+async function loadBasemap() {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+  try { const r = await fetch(CONFIG.basemap, { signal: ctl.signal }); if (!r.ok) return null; const s = await r.json(); return s && s.version === 8 && Array.isArray(s.layers) ? s : null; }
+  catch { return null; } finally { clearTimeout(t); }
+}
+let basemapP = null;
+async function ensureMap() {
+  if (gl) return;
+  const base = await (basemapP ||= loadBasemap());
+  const c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0], s = ["boolean", ["feature-state", "s"], false];
+  const sources = {
+    parcels: { type: "geojson", data: S.fc, promoteId: "id", tolerance: 0.2 },
+    pts: { type: "geojson", promoteId: "id", data: { type: "FeatureCollection", features: S.fc.features.map(f => ({ type: "Feature", properties: { id: f.properties.id }, geometry: { type: "Point", coordinates: [f.properties.cx, f.properties.cy] } })) } },
+    me: { type: "geojson", data: { type: "FeatureCollection", features: [] } }
+  };
+  const layers = [
+    { id: "lots-fill", type: "fill", source: "parcels", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0.35 } },
+    { id: "lots-line", type: "line", source: "parcels", paint: { "line-color": "#A3A0A8", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.1, 15, 0.4, 18, 1] } },
+    { id: "lots-dots", type: "circle", source: "pts", maxzoom: 15, paint: {
+        "circle-color": "#FFFFFF", "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["case", [">", c, 0], 3, 1.6], 14, ["case", [">", c, 0], 4.6, 2.8]],
+        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0], "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0],
+        "circle-stroke-color": ["case", [">", m, 0], "#1D1A26", "#8F8C94"], "circle-stroke-width": ["case", [">", m, 0], 1.6, 0.35] } },
+    { id: "mine-halo", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#FFFFFF", "line-opacity": ["case", [">", m, 0], 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 13, 2.5, 16, 4.5, 18, 6] } },
+    { id: "mine-line", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#1D1A26", "line-opacity": ["case", [">", m, 0], 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1.2, 16, 2, 18, 2.6] } },
+    { id: "sel-line", type: "line", source: "parcels", paint: { "line-color": "#D6336C", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 16, 3.5, 18, 4.5] } },
+    { id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 14, "circle-color": "#2F6FEB", "circle-opacity": 0.18 } },
+    { id: "me-dot", type: "circle", source: "me", paint: { "circle-radius": 6, "circle-color": "#2F6FEB", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } }
+  ];
+  let style;
+  if (base) { let at = base.layers.findIndex(l => l.type === "symbol"); if (at < 0) at = base.layers.length; style = { ...base, sources: { ...base.sources, ...sources }, layers: [...base.layers.slice(0, at), ...layers, ...base.layers.slice(at)] }; }
+  else style = { version: 8, sources: { base: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19, attribution: "&copy; OpenStreetMap contributors" }, ...sources },
+    layers: [{ id: "base", type: "raster", source: "base", paint: { "raster-saturation": -1, "raster-contrast": -0.2, "raster-brightness-min": 0.15 } }, ...layers] };
+  $("#map").hidden = false;
+  gl = new maplibregl.Map({ container: "map", style, bounds: bbox(), fitBoundsOptions: { padding: 40 }, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false, doubleClickZoom: false, maxZoom: 19.5 });   // taps are votes, so no double-tap zoom
+  gl.touchZoomRotate.disableRotation();
+  gl.on("error", e => console.warn("Map:", e.error?.message || e));
+  gl.on("click", e => {
+    const exact = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill"] });
+    const f = exact.length ? exact : gl.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ["lots-fill", "lots-dots"] });
+    const hit = f.find(x => x.layer.id === "lots-fill") || f[0];
+    if (hit) tapLot(hit.id ?? normId(hit.properties.id)); else closeCard();
+  });
+  gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length ? "pointer" : ""; });
+  await new Promise(ok => { if (gl.isStyleLoaded()) return ok(); let done = false; const go = () => { if (!done) { done = true; ok(); } }; gl.once("load", go); gl.once("style.load", go); setTimeout(go, 8000); });
+}
+function keepInView(id) {
+  if (!gl) return;
+  const p = S.byId.get(id).properties, pt = gl.project([p.cx, p.cy]), W = innerWidth, H = innerHeight, wide = W >= 900;
+  const head = $("[data-head]")?.getBoundingClientRect(), card = $("[data-card]")?.getBoundingClientRect();
+  const r = wide ? { left: (head?.right || 0) + 20, right: (card?.left || W) - 20, top: 20, bottom: H - 20 }
+                 : { left: 16, right: W - 16, top: (head?.bottom || 0) + 16, bottom: (card?.top || H) - 16 };
+  if (pt.x > r.left && pt.x < r.right && pt.y > r.top && pt.y < r.bottom) return;
+  gl.easeTo({ center: [p.cx, p.cy], offset: [(r.left + r.right) / 2 - W / 2, (r.top + r.bottom) / 2 - H / 2], duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350 });
+}
+function showMe() { gl?.getSource("me")?.setData({ type: "FeatureCollection", features: S.me ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: S.me } }] : [] }); }
+function flyTo(id) { const p = S.byId.get(id).properties; gl.jumpTo({ center: [p.cx, p.cy], zoom: Math.max(gl.getZoom(), 17) }); }
+function bbox() { let x0 = 180, y0 = 90, x1 = -180, y1 = -90; for (const f of S.fc.features) { const p = f.properties; x0 = Math.min(x0, p.cx); y0 = Math.min(y0, p.cy); x1 = Math.max(x1, p.cx); y1 = Math.max(y1, p.cy); } return [[x0, y0], [x1, y1]]; }
+
+/* --- prototype: a sample batch with invented votes --- */
+async function addSamples() {
+  await parcelsReady; if (!S.fc) throw new Error(S.parcelsError || "The city's lots haven't loaded.");
+  let seed = 4242; const rnd = () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const P = S.fc.features.map(f => f.properties), near = (x, y, r) => P.filter(p => Math.abs(p.cx - x) < r && Math.abs(p.cy - y) * 1.33 < r);
+  const pool = [...near(-81.627, 41.504, 0.012), ...near(-81.611, 41.531, 0.012)];
+  if (pool.length < 30) throw new Error("Couldn't find lots for the samples.");
+  if (!(await Store.info()).organizer) LocalStore.setupOrg();
+  const key = JSON.parse(LocalStore.exportAll()).org;
+  const budgets = { open_space: 5, yard_expansion: 3, development: 5 };
+  const r = await Store.newBatch(key, { label: "Sample training (invented votes)", n: 40, budgets });
+  const hot = pool.slice(0, 30);
+  for (const code of r.keys.slice(0, 28)) {
+    for (const c of CHOICES) {
+      const picks = new Set();
+      while (picks.size < budgets[c.key]) picks.add((rnd() < 0.5 ? hot[Math.floor(rnd() * hot.length)] : pool[Math.floor(rnd() * pool.length)]).id);
+      for (const id of picks) { try { await Store.vote(code, id, c.key); } catch {} }
+    }
+  }
+}
+
+/* =====================================================================
+   Start
+   ===================================================================== */
+parcelsReady = loadParcels().then(fc => {
+  S.fc = fc; S.fields = fc.metadata.fields;
+  for (const f of fc.features) S.byId.set(f.properties.id, f);
+  S.ids = [...S.byId.keys()];
+}).catch(e => { S.parcelsError = e.message || String(e); console.error(e); });
+basemapP = loadBasemap();
+window.addEventListener("hashchange", route);
+(async () => {
+  if (!window.maplibregl) { $("#app").innerHTML = `<div class="boot"><div><b>The map library didn't load</b>It comes from cdn.jsdelivr.net. Check the internet connection.</div></div>`; return; }
+  if (!PROTOTYPE && !window.supabase) {
+    try { await loadScript(SUPABASE_JS); }
+    catch { $("#app").innerHTML = `<div class="boot"><div><b>The record didn't load</b>Its library comes from cdn.jsdelivr.net. Check the internet connection and reload.</div></div>`; return; }
+  }
+  route();
+})();
+</script>
+</body>
+</html>
