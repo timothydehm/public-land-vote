@@ -14,13 +14,19 @@
 --   pv_parcels   the city's land bank inventory, synced hourly. Lots the
 --                city stops publishing are archived, never deleted, so
 --                their votes stay in the record.
---   pv_maps      a coalition's map: question, steward, votes per member,
---                on-site rule, and the hash of the steward key.
---   pv_codes     invite codes. One per member; readable only through the
---                steward key.
---   pv_votes     current votes: map, parcel, member number, time, and the
---                on-site yes/no on on-site maps. Public.
---   pv_history   every vote and take-back, append-only. Public.
+--   pv_maps      a coalition's map: its kind, question, steward, votes per
+--                member, on-site rule, and the hash of the steward key.
+--                Two kinds: a question map (a vote means "yes" to the
+--                coalition's question) and a land bank map (three fixed
+--                answers matching the city's land bank programs: open
+--                space, development, yard expansion, each with its own
+--                number of votes per member).
+--   pv_codes     invite codes. One per member, in labeled groups; readable
+--                only through the steward key. Group labels are public.
+--   pv_votes     current votes: map, parcel, member number, answer (land
+--                bank maps), time, and the on-site yes/no on on-site maps.
+--                One vote per lot per member. Public.
+--   pv_history   every vote, change, and take-back, append-only. Public.
 --   pv_sync      where the lots come from and how the last sync went.
 --   pv_attempts  rate limiting by network address.
 -- =====================================================================
@@ -91,7 +97,9 @@ create table if not exists pv_maps (
   id         text primary key check (id ~ '^[a-z0-9]{4,12}$'),
   question   text not null check (length(question) between 1 and 200),
   steward    text check (length(steward) <= 80),
-  budget     int not null check (budget between 1 and 100),
+  kind       text not null default 'question' check (kind in ('question', 'land_bank')),
+  budget     int check (budget between 1 and 100),          -- question maps: votes per member
+  budgets    jsonb,                          -- land bank maps: {"open_space": n, "development": n, "yard_expansion": n}
   onsite     boolean not null default false,
   key_hash   text not null,                  -- sha-256 of the steward key; the key itself is never stored
   members    int not null default 0,         -- member numbers handed out so far
@@ -104,6 +112,7 @@ create table if not exists pv_codes (
   member     int not null,
   created_at timestamptz not null default now(),
   used_at    timestamptz,                    -- first vote
+  label      text check (length(label) <= 80),   -- the code's group ("Hough training, Oct 12"). Public.
   unique (map_id, member)
 );
 
@@ -111,6 +120,7 @@ create table if not exists pv_votes (
   map_id    text not null,
   parcel_id text not null references pv_parcels(id),
   member    int not null,
+  choice    text,                            -- land bank maps: open_space, development or yard_expansion. Null on question maps.
   onsite    boolean,                         -- on-site maps only: was the vote cast at the lot. Never a location.
   at        timestamptz not null default now(),
   primary key (map_id, parcel_id, member),
@@ -123,11 +133,27 @@ create table if not exists pv_history (
   map_id    text not null,
   parcel_id text not null,
   member    int not null,
-  action    text not null check (action in ('vote', 'take back')),
+  action    text not null check (action in ('vote', 'change', 'take back')),
+  choice    text,
   onsite    boolean,
   at        timestamptz not null default now()
 );
 create index if not exists pv_history_by_map on pv_history (map_id, at);
+
+-- Land bank maps (Oct 2026). Brings a database made before them up to date; existing maps become question maps.
+alter table pv_maps    add column if not exists kind text not null default 'question' check (kind in ('question', 'land_bank'));
+alter table pv_maps    add column if not exists budgets jsonb;
+alter table pv_maps    alter column budget drop not null;
+alter table pv_maps    drop constraint if exists pv_maps_terms;
+alter table pv_maps    add constraint pv_maps_terms check ((kind = 'question' and budget is not null) or (kind = 'land_bank' and budgets is not null));
+alter table pv_codes   add column if not exists label text check (length(label) <= 80);
+alter table pv_votes   add column if not exists choice text;
+alter table pv_votes   drop constraint if exists pv_votes_choice;
+alter table pv_votes   add constraint pv_votes_choice check (choice is null or choice in ('open_space', 'development', 'yard_expansion'));
+alter table pv_history add column if not exists choice text;
+alter table pv_history drop constraint if exists pv_history_action_check;
+alter table pv_history add constraint pv_history_action_check check (action in ('vote', 'change', 'take back'));
+create index if not exists pv_votes_by_member on pv_votes (map_id, member, choice);
 
 create table if not exists pv_attempts (
   ip   text not null,
@@ -197,30 +223,51 @@ end $$;
 create or replace function pv_err(p_code text) returns jsonb
 language sql immutable set search_path = public as $$ select jsonb_build_object('error', p_code) $$;
 
--- A map's public face: its terms and turnout. Never the steward key or the codes.
+-- The land bank's programs: the fixed answers on a land bank map, in the order the page shows them.
+create or replace function pv_answers() returns text[]
+language sql immutable set search_path = public as $$ select array['open_space', 'development', 'yard_expansion'] $$;
+
+-- Votes per answer, as {"open_space": n, "development": n, "yard_expansion": n}.
+create or replace function pv_by(o bigint, d bigint, y bigint) returns jsonb
+language sql immutable set search_path = public as $$ select jsonb_build_object('open_space', o, 'development', d, 'yard_expansion', y) $$;
+
+-- A map's public face: its terms and turnout (by code group too). Never the steward key or the codes.
 create or replace function pv_map_info(p_id text) returns jsonb
 language sql stable security definer set search_path = public as $$
-  select jsonb_build_object('id', m.id, 'question', m.question, 'steward', m.steward, 'budget', m.budget, 'onsite', m.onsite,
-           'created_at', m.created_at,
+  select jsonb_build_object('id', m.id, 'kind', m.kind, 'question', m.question, 'steward', m.steward, 'budget', m.budget, 'budgets', m.budgets,
+           'onsite', m.onsite, 'created_at', m.created_at,
            'issued', (select count(*) from pv_codes c where c.map_id = m.id),
            'used',   (select count(*) from pv_codes c where c.map_id = m.id and c.used_at is not null),
-           'votes',  (select count(*) from pv_votes v where v.map_id = m.id),
-           'lots',   (select count(distinct v.parcel_id) from pv_votes v where v.map_id = m.id))
-  from pv_maps m where m.id = p_id
+           'votes',  v.n, 'lots', v.lots,
+           'by',     case when m.kind = 'land_bank' then pv_by(v.o, v.d, v.y) end,
+           'groups', (select coalesce(jsonb_agg(jsonb_build_object('label', g.label, 'issued', g.issued, 'used', g.used) order by g.first_member), '[]')
+                      from (select c.label, count(*) issued, count(c.used_at) used, min(c.member) as first_member from pv_codes c where c.map_id = m.id group by c.label) g))
+  from pv_maps m,
+       lateral (select count(*) n, count(distinct parcel_id) lots, count(*) filter (where choice = 'open_space') o,
+                       count(*) filter (where choice = 'development') d, count(*) filter (where choice = 'yard_expansion') y
+                from pv_votes x where x.map_id = m.id) v
+  where m.id = p_id
 $$;
 
-create or replace function pv_issue_codes(p_map text, p_n int) returns jsonb
+drop function if exists pv_issue_codes(text, int);
+create or replace function pv_issue_codes(p_map text, p_n int, p_label text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare first int; c text; out jsonb := '[]';
 begin
   update pv_maps set members = members + p_n where id = p_map returning members - p_n into first;
   for i in 1..p_n loop
     loop c := pv_rand(8); exit when not exists (select 1 from pv_codes where code = c); end loop;
-    insert into pv_codes (code, map_id, member) values (c, p_map, first + i);
+    insert into pv_codes (code, map_id, member, label) values (c, p_map, first + i, p_label);
     out := out || to_jsonb(c);
   end loop;
   return out;
 end $$;
+
+-- A code group's label: trimmed, blank means none. Null back if it's too long.
+create or replace function pv_label(p text, out ok boolean, out label text)
+language sql immutable set search_path = public as $$
+  select length(trim(coalesce(p, ''))) <= 80, nullif(trim(coalesce(p, '')), '')
+$$;
 
 
 -- ------------------------------------------------------------------- maps
@@ -236,20 +283,43 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- Anyone can start a map. Returns the map, its steward key (shown once), and the invite codes.
-create or replace function pv_create_map(p_question text, p_steward text, p_budget int, p_members int, p_onsite boolean)
+-- Question map: p_budget votes per member. Land bank map: p_budgets, votes per member for each answer
+-- (0 leaves that answer off the map). p_label names the first group of codes.
+-- Postgres can't change a function's arguments in place, so the older versions are dropped first.
+drop function if exists pv_create_map(text, text, int, int, boolean);
+create or replace function pv_create_map(p_question text, p_steward text, p_kind text default 'question', p_budget int default null,
+  p_budgets jsonb default null, p_members int default null, p_onsite boolean default false, p_label text default null)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare v_id text; k text := pv_words(); codes jsonb; q text := trim(coalesce(p_question, '')); s text := nullif(trim(coalesce(p_steward, '')), '');
+declare
+  v_id text; k text := pv_words(); codes jsonb; kind text := coalesce(nullif(p_kind, ''), 'question');
+  q text := trim(coalesce(p_question, '')); s text := nullif(trim(coalesce(p_steward, '')), ''); lab record;
+  b jsonb := '{}'; a text; n numeric; total int := 0;
 begin
+  if kind not in ('question', 'land_bank') then return pv_err('bad_kind'); end if;
+  if kind = 'land_bank' and q = '' then q := 'What should each lot become?'; end if;
   if q = '' or length(q) > 200 then return pv_err('bad_question'); end if;
   if length(s) > 80 then return pv_err('bad_steward'); end if;
-  if p_budget is null or p_budget < 1 or p_budget > 100 then return pv_err('bad_budget'); end if;
+  if kind = 'question' then
+    if p_budget is null or p_budget < 1 or p_budget > 100 then return pv_err('bad_budget'); end if;
+  else
+    foreach a in array pv_answers() loop
+      if jsonb_typeof(p_budgets -> a) is distinct from 'number' then return pv_err('bad_budget'); end if;
+      n := (p_budgets ->> a)::numeric;
+      if n <> trunc(n) or n < 0 or n > 100 then return pv_err('bad_budget'); end if;
+      b := b || jsonb_build_object(a, n::int); total := total + n::int;
+    end loop;
+    if total = 0 then return pv_err('bad_budget'); end if;
+  end if;
   if p_members is null or p_members < 1 or p_members > 2000 then return pv_err('bad_members'); end if;
+  select * into lab from pv_label(p_label); if not lab.ok then return pv_err('bad_label'); end if;
   if pv_over('create', 20, interval '1 hour') then return pv_err('too_many_attempts'); end if;
   perform pv_note('create');
   loop v_id := lower(pv_rand(6)); exit when not exists (select 1 from pv_maps m where m.id = v_id); end loop;
-  insert into pv_maps (id, question, steward, budget, onsite, key_hash) values (v_id, q, s, p_budget, coalesce(p_onsite, false), pv_hash(pv_norm_key(k)));
-  codes := pv_issue_codes(v_id, p_members);
+  insert into pv_maps (id, kind, question, steward, budget, budgets, onsite, key_hash)
+    values (v_id, kind, q, s, case when kind = 'question' then p_budget end, case when kind = 'land_bank' then b end,
+            coalesce(p_onsite, false), pv_hash(pv_norm_key(k)));
+  codes := pv_issue_codes(v_id, p_members, lab.label);
   return jsonb_build_object('map', pv_map_info(v_id), 'key', k, 'codes', codes);
 end $$;
 
@@ -267,18 +337,22 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not exists (select 1 from pv_maps where id = p_map) then return pv_err('map_not_found'); end if;
   if not pv_steward_ok(p_map, p_key) then return pv_err('bad_key'); end if;
-  return coalesce((select jsonb_agg(jsonb_build_object('code', code, 'member', member, 'used_at', used_at) order by member)
+  return coalesce((select jsonb_agg(jsonb_build_object('code', code, 'member', member, 'label', label, 'used_at', used_at) order by member)
                    from pv_codes where map_id = p_map), '[]');
 exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
 end $$;
 
-create or replace function pv_add_codes(p_map text, p_key text, p_n int) returns jsonb
+drop function if exists pv_add_codes(text, text, int);
+create or replace function pv_add_codes(p_map text, p_key text, p_n int, p_label text default null) returns jsonb
 language plpgsql security definer set search_path = public as $$
+declare lab record;
 begin
+  select * into lab from pv_label(p_label);
   if p_n is null or p_n < 1 or p_n > 1000 then return pv_err('bad_members'); end if;
+  if not lab.ok then return pv_err('bad_label'); end if;
   if not pv_steward_ok(p_map, p_key) then return pv_err('bad_key'); end if;
   if (select members from pv_maps where id = p_map) + p_n > 5000 then return pv_err('bad_members'); end if;
-  return pv_issue_codes(p_map, p_n);
+  return pv_issue_codes(p_map, p_n, lab.label);
 exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
 end $$;
 
@@ -303,12 +377,16 @@ begin
   if pv_over('miss', 30, interval '10 minutes') then return pv_err('too_many_attempts'); end if;
   select * into c from pv_codes where code = pv_norm(p_code);
   if not found then perform pv_note('miss'); return pv_err('code_not_found'); end if;
-  return jsonb_build_object('map', c.map_id, 'member', c.member);
+  return jsonb_build_object('map', c.map_id, 'member', c.member, 'label', c.label);
 end $$;
 
-create or replace function pv_vote(p_code text, p_parcel text, p_onsite boolean) returns jsonb
+-- Cast or change this member's vote on a lot. Question maps: p_choice is ignored and a vote means yes.
+-- Land bank maps: p_choice is one of pv_answers(); a different answer changes the vote, the same one changes
+-- nothing. Each answer has its own number of votes per member (budget_used), and 0 leaves it off (choice_off).
+drop function if exists pv_vote(text, text, boolean);
+create or replace function pv_vote(p_code text, p_parcel text, p_choice text default null, p_onsite boolean default null) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare c pv_codes; m pv_maps; pid text := pv_norm(p_parcel); used int;
+declare c pv_codes; m pv_maps; cur pv_votes; had boolean; pid text := pv_norm(p_parcel); ch text := nullif(trim(coalesce(p_choice, '')), ''); lim int; used int;
 begin
   select * into c from pv_codes where code = pv_norm(p_code);
   if not found then
@@ -318,21 +396,37 @@ begin
   perform pg_advisory_xact_lock(hashtext('pv-member:' || c.map_id || ':' || c.member));
   select * into m from pv_maps where id = c.map_id;
   if not exists (select 1 from pv_parcels where id = pid and status = 'public') then return pv_err('parcel_not_found'); end if;
-  if exists (select 1 from pv_votes where map_id = m.id and parcel_id = pid and member = c.member) then
-    return jsonb_build_object('ok', true);
+  if m.kind = 'land_bank' then
+    if ch is null or not ch = any(pv_answers()) then return pv_err('bad_choice'); end if;
+  else ch := null; end if;
+  select * into cur from pv_votes where map_id = m.id and parcel_id = pid and member = c.member;
+  had := found;
+  if had and (m.kind = 'question' or cur.choice = ch) then return jsonb_build_object('ok', true); end if;
+  if m.kind = 'land_bank' then
+    lim := coalesce((m.budgets ->> ch)::int, 0);
+    if lim <= 0 then return pv_err('choice_off'); end if;
+    select count(*) into used from pv_votes where map_id = m.id and member = c.member and choice = ch;
+  else
+    lim := m.budget;
+    select count(*) into used from pv_votes where map_id = m.id and member = c.member;
   end if;
-  select count(*) into used from pv_votes where map_id = m.id and member = c.member;
-  if used >= m.budget then return pv_err('budget_used'); end if;
+  if used >= lim then return pv_err('budget_used'); end if;
   if m.onsite and not coalesce(p_onsite, false) then return pv_err('off_site'); end if;
-  insert into pv_votes (map_id, parcel_id, member, onsite) values (m.id, pid, c.member, case when m.onsite then true end);
-  insert into pv_history (map_id, parcel_id, member, action, onsite) values (m.id, pid, c.member, 'vote', case when m.onsite then true end);
+  if had then
+    update pv_votes set choice = ch, at = now(), onsite = case when m.onsite then true end
+      where map_id = m.id and parcel_id = pid and member = c.member;
+  else
+    insert into pv_votes (map_id, parcel_id, member, choice, onsite) values (m.id, pid, c.member, ch, case when m.onsite then true end);
+  end if;
+  insert into pv_history (map_id, parcel_id, member, action, choice, onsite)
+    values (m.id, pid, c.member, case when had then 'change' else 'vote' end, ch, case when m.onsite then true end);
   update pv_codes set used_at = coalesce(used_at, now()) where code = c.code;
-  return jsonb_build_object('ok', true, 'left', m.budget - used - 1);
+  return jsonb_build_object('ok', true, 'left', lim - used - 1);
 end $$;
 
 create or replace function pv_unvote(p_code text, p_parcel text) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare c pv_codes; pid text := pv_norm(p_parcel);
+declare c pv_codes; pid text := pv_norm(p_parcel); ch text;
 begin
   select * into c from pv_codes where code = pv_norm(p_code);
   if not found then
@@ -340,38 +434,46 @@ begin
     perform pv_note('miss'); return pv_err('not_member');
   end if;
   perform pg_advisory_xact_lock(hashtext('pv-member:' || c.map_id || ':' || c.member));
-  delete from pv_votes where map_id = c.map_id and parcel_id = pid and member = c.member;
-  if found then insert into pv_history (map_id, parcel_id, member, action) values (c.map_id, pid, c.member, 'take back'); end if;
+  delete from pv_votes where map_id = c.map_id and parcel_id = pid and member = c.member returning choice into ch;
+  if found then insert into pv_history (map_id, parcel_id, member, action, choice) values (c.map_id, pid, c.member, 'take back', ch); end if;
   return jsonb_build_object('ok', true);
 end $$;
 
 
 -- ------------------------------------------------------------- reading
 
-create or replace function pv_tally(p_map text) returns jsonb   -- [[parcel, votes], ...]
+-- Question maps: [[parcel, votes], ...]. Land bank maps: [[parcel, open space, development, yard expansion], ...].
+create or replace function pv_tally(p_map text) returns jsonb
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_array(parcel_id, n)), '[]')
-  from (select parcel_id, count(*) n from pv_votes where map_id = p_map group by parcel_id) t
+  select coalesce(jsonb_agg(case when m.kind = 'land_bank' then jsonb_build_array(t.parcel_id, t.o, t.d, t.y) else jsonb_build_array(t.parcel_id, t.n) end), '[]')
+  from pv_maps m,
+       lateral (select parcel_id, count(*) n, count(*) filter (where choice = 'open_space') o, count(*) filter (where choice = 'development') d,
+                       count(*) filter (where choice = 'yard_expansion') y
+                from pv_votes where map_id = m.id group by parcel_id) t
+  where m.id = p_map
 $$;
 
-create or replace function pv_mine(p_code text) returns jsonb   -- the lots this code has voted for
+create or replace function pv_mine(p_code text) returns jsonb   -- this code's votes: [[parcel, answer or null], ...]
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(v.parcel_id), '[]')
+  select coalesce(jsonb_agg(jsonb_build_array(v.parcel_id, v.choice)), '[]')
   from pv_codes c join pv_votes v on v.map_id = c.map_id and v.member = c.member
   where c.code = pv_norm(p_code)
 $$;
 
-create or replace function pv_lot_maps(p_parcel text) returns jsonb   -- every map with votes on this lot
+create or replace function pv_lot_maps(p_parcel text) returns jsonb   -- every map with votes on this lot, with votes per answer on land bank maps
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'question', m.question, 'steward', m.steward, 'votes', t.n) order by t.n desc), '[]')
-  from (select map_id, count(*) n from pv_votes where parcel_id = pv_norm(p_parcel) group by map_id) t join pv_maps m on m.id = t.map_id
+  select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'kind', m.kind, 'question', m.question, 'steward', m.steward, 'votes', t.n,
+           'by', case when m.kind = 'land_bank' then pv_by(t.o, t.d, t.y) end) order by t.n desc, m.created_at), '[]')
+  from (select map_id, count(*) n, count(*) filter (where choice = 'open_space') o, count(*) filter (where choice = 'development') d,
+               count(*) filter (where choice = 'yard_expansion') y
+        from pv_votes where parcel_id = pv_norm(p_parcel) group by map_id) t join pv_maps m on m.id = t.map_id
 $$;
 
 create or replace function pv_record(p_map text default null) returns jsonb   -- every current vote, for download
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_object('map', v.map_id, 'question', m.question, 'parcel', v.parcel_id, 'member', v.member,
-           'at', v.at, 'onsite', v.onsite) order by v.map_id, v.at), '[]')
-  from pv_votes v join pv_maps m on m.id = v.map_id
+  select coalesce(jsonb_agg(jsonb_build_object('map', v.map_id, 'kind', m.kind, 'question', m.question, 'parcel', v.parcel_id, 'member', v.member,
+           'choice', v.choice, 'label', c.label, 'at', v.at, 'onsite', v.onsite) order by v.map_id, v.at), '[]')
+  from pv_votes v join pv_maps m on m.id = v.map_id left join pv_codes c on c.map_id = v.map_id and c.member = v.member
   where p_map is null or v.map_id = p_map
 $$;
 
@@ -501,17 +603,38 @@ begin
 end $$;
 grant execute on function pv_list_maps()                                  to anon, authenticated;
 grant execute on function pv_get_map(text)                                to anon, authenticated;
-grant execute on function pv_create_map(text, text, int, int, boolean)    to anon, authenticated;
+grant execute on function pv_create_map(text, text, text, int, jsonb, int, boolean, text) to anon, authenticated;
 grant execute on function pv_codes(text, text)                            to anon, authenticated;
-grant execute on function pv_add_codes(text, text, int)                   to anon, authenticated;
+grant execute on function pv_add_codes(text, text, int, text)             to anon, authenticated;
 grant execute on function pv_find_by_key(text)                            to anon, authenticated;
 grant execute on function pv_join(text)                                   to anon, authenticated;
-grant execute on function pv_vote(text, text, boolean)                    to anon, authenticated;
+grant execute on function pv_vote(text, text, text, boolean)              to anon, authenticated;
 grant execute on function pv_unvote(text, text)                           to anon, authenticated;
 grant execute on function pv_tally(text)                                  to anon, authenticated;
 grant execute on function pv_mine(text)                                   to anon, authenticated;
 grant execute on function pv_lot_maps(text)                               to anon, authenticated;
 grant execute on function pv_record(text)                                 to anon, authenticated;
+
+
+-- ------------------------------------- retiring the Land Bank Program Vote
+-- Its single map is now a land bank map in this tool. Its lp_* tables and functions (programs/schema.sql)
+-- are removed if they hold no votes. If they do, nothing is touched: download them first
+-- (select lp_record();), then run   drop table lp_votes, lp_history, lp_keys, lp_batches, lp_settings cascade;
+do $$
+declare f regprocedure; n bigint := 0;
+begin
+  if to_regclass('public.lp_votes') is not null then execute 'select count(*) from lp_votes' into n; end if;
+  if n > 0 then
+    raise notice 'Left the Land Bank Program Vote tables in place: lp_votes has % votes. Export them, then drop them by hand.', n;
+    return;
+  end if;
+  drop table if exists lp_votes, lp_history, lp_keys, lp_batches, lp_settings cascade;
+  drop sequence if exists lp_voter_seq;
+  for f in select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and p.proname like 'lp\_%' loop
+    execute format('drop function %s', f);
+  end loop;
+end $$;
 
 
 -- ----------------------------------------- schedule the sync, run it once
