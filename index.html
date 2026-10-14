@@ -119,55 +119,98 @@ table.t td.code{font-variant-numeric:tabular-nums;letter-spacing:.05em;font-weig
   .cards{grid-template-columns:repeat(3,1fr)}
 }
 
-/* ---------- the map: one box holds everything ---------- */
+/* ---------- the map: the map, a bar of choices, and the open lot ---------- */
 #map{position:fixed;inset:0;background:#fff}
 .maplibregl-ctrl-attrib{font-size:10.5px}
-.box{position:fixed;z-index:10;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-width:420px;max-height:62vh;max-height:62dvh;overflow:auto;
-  background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:12px 14px}
-@media (min-width:900px){.box{left:20px;top:20px;bottom:auto;width:380px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}}
-.box .bt{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px}
-.box .name{font-weight:650;color:var(--muted);text-decoration:none}
-.box h1{margin:2px 0 0;font-size:17px;line-height:1.3;font-weight:700;letter-spacing:-.01em}
-.box .stats{font-size:12.8px;color:var(--muted);margin-top:2px}
-.box .stats b{color:var(--ink);font-weight:650}
-.box .sec{border-top:1px solid var(--mist);margin-top:10px;padding-top:10px}
-.lot-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.lot-h b{font-size:16px;line-height:1.25;display:block}
-.lot-h .pin{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-.x{width:32px;height:32px;margin:-4px -6px 0 0;border:0;border-radius:8px;background:transparent;display:grid;place-items:center;flex:none}
-.x:hover{background:var(--mist)}
-.x svg{width:18px;height:18px}
-table.key{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
-table.key th{font-size:11.5px;font-weight:600;color:var(--muted);text-align:right;padding:0 0 2px 10px;white-space:nowrap}
-table.key td{padding:3px 0 3px 10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-table.key td:first-child,table.key th:first-child{text-align:left;padding-left:0}
-table.key td:first-child{display:flex;align-items:center;gap:7px}
-table.key .z{color:#b5b2ad}
-table.key td.you{font-weight:700}
-table.key td.you::after{content:"✓";margin-left:4px}
-.note{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:5px}
-.msg{font-size:13px;color:var(--muted);margin-top:6px}
-.msg.bad{color:var(--danger)}
-.box details{margin-top:8px;font-size:13.5px}
-.box summary{cursor:pointer;font-weight:600;color:var(--muted);font-size:13px}
-dl.city{display:grid;grid-template-columns:minmax(110px,42%) 1fr;gap:4px 10px;margin:6px 0 0;font-size:13px}
+.dock{position:fixed;z-index:10;left:0;right:0;bottom:0;padding:0 10px calc(env(safe-area-inset-bottom,0px) + 10px);
+  display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.dock>*{pointer-events:auto;width:100%;max-width:440px}
+.vbar{display:flex;align-items:center;gap:6px;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);padding:7px}
+.sq{flex:1 1 0;min-width:0;height:50px;border:0;border-radius:12px;background:var(--c);color:#fff;font-size:19px;font-weight:700;
+  font-variant-numeric:tabular-nums;display:grid;place-items:center;overflow:hidden;position:relative;
+  opacity:.4;filter:saturate(.75);transition:opacity .18s,filter .18s,transform .15s,box-shadow .15s;cursor:default;-webkit-tap-highlight-color:transparent}
+.vbar.lit .sq{opacity:1;filter:none;cursor:pointer}
+.vbar.lit .sq:active{transform:scale(.95)}
+.vbar.lit .sq.cur{box-shadow:0 0 0 2.5px var(--paper),0 0 0 5px var(--ink);transform:translateY(-1px)}
+.sq .n{display:inline-block;text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.sq .n.down{animation:tickDown .28s ease-out}
+.sq .n.up{animation:tickUp .28s ease-out}
+@keyframes tickDown{from{transform:translateY(-70%);opacity:0}to{transform:none;opacity:1}}
+@keyframes tickUp{from{transform:translateY(70%);opacity:0}to{transform:none;opacity:1}}
+.shake{animation:shake .36s ease-in-out}
+@keyframes shake{0%,100%{translate:0}20%{translate:-6px}40%{translate:6px}60%{translate:-4px}80%{translate:3px}}
+.ib{flex:none;width:44px;height:50px;border:0;border-radius:12px;background:transparent;display:grid;place-items:center;color:var(--ink);-webkit-tap-highlight-color:transparent}
+.ib:hover,.ib[aria-expanded="true"]{background:var(--mist)}
+.ib svg{width:23px;height:23px}
+.idbar{display:flex;gap:6px;background:var(--paper);border-radius:14px;box-shadow:var(--shadow);padding:5px}
+.idbar input{flex:1;min-width:0;min-height:38px;border:0;border-radius:10px;background:var(--mist);padding:0 12px;font-size:15px}
+.idbar input::placeholder{text-transform:none;letter-spacing:0}
+.idbar input:focus{outline:2px solid var(--ink);outline-offset:0}
+.idbar .btn{min-height:38px;padding:0 14px;font-size:14px}
+
+/* the open lot: a strip above the bar on phones, a panel on wide screens */
+.card{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:11px 12px 11px 14px;max-height:calc(100vh - var(--bar-h,80px) - 90px);
+  max-height:calc(100dvh - var(--bar-h,80px) - 90px);overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+.card.in{animation:cardIn .2s ease-out}
+@keyframes cardIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.ch{display:flex;align-items:center;gap:10px}
+.ct{flex:1;min-width:0}
+.ct b{display:block;font-size:16.5px;line-height:1.25;letter-spacing:-.005em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr{display:flex;align-items:center;gap:8px;margin-top:3px;font-size:13.5px;min-height:20px}
+.cr .sp{flex:1}
+.you{display:inline-flex;align-items:center;gap:6px;font-weight:650}
+.you .sw{width:12px;height:12px}
+.tip{color:var(--muted)}
+.nx{flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--mist);display:grid;place-items:center;color:var(--ink)}
+.nx:hover{background:#e8e6e2}
+.nx svg{width:21px;height:21px}
+.cx{border-top:1px solid var(--mist);margin-top:9px;padding-top:9px;font-size:13.5px}
+.cx .pin{color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:6px}
+table.tl{width:100%;border-collapse:collapse;font-size:14px}
+table.tl td{padding:3px 0}
+table.tl td:first-child{display:flex;align-items:center;gap:7px}
+table.tl td.num{text-align:right;font-weight:600}
+table.tl tr.me td{font-weight:700}
+.cx h3{font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 4px;letter-spacing:.01em}
+dl.city{display:grid;grid-template-columns:minmax(110px,42%) 1fr;gap:4px 10px;margin:0;font-size:13px}
 dl.city dt{color:var(--muted)}
 dl.city dd{margin:0;word-break:break-word}
 dl.city dd.blank{color:#a19da6;font-style:italic}
-.others{margin-top:8px;font-size:13px}
-.others a{display:block;text-decoration:none;padding:5px 0}
+.others a{display:block;text-decoration:none;padding:5px 0;font-size:13px}
 .others .oq{font-weight:600;line-height:1.3}
 .others .on{color:var(--muted)}
-.foot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13.5px}
-.foot .join input,.foot .join .btn{min-height:40px}
-.ctl{display:flex;gap:6px;align-items:center;justify-content:space-between;margin-top:8px}
-.locate{position:fixed;z-index:9;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px + var(--box-h,220px) + 10px);width:44px;height:44px;border-radius:50%;border:0;background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center}
+@media (min-width:900px){
+  .card{position:fixed;left:20px;top:20px;width:360px;max-width:none;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}
+  .card.in{animation-name:cardInSide}
+}
+@media (max-width:899.98px){.dock.menu-open .card{display:none}}
+@media (min-width:900px){.maplibregl-ctrl-top-left{top:auto;bottom:0}}
+@keyframes cardInSide{from{transform:translateX(-12px);opacity:0}to{transform:none;opacity:1}}
+
+/* ⋯ menu: everything that isn't voting */
+.menu{align-self:center;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:6px;font-size:14.5px;
+  max-height:calc(100vh - var(--bar-h,80px) - 40px);max-height:calc(100dvh - var(--bar-h,80px) - 40px);overflow:auto;animation:cardIn .16s ease-out}
+.menu .mi{padding:9px 10px 10px;border-bottom:1px solid var(--mist);margin-bottom:4px}
+.menu .mi b{display:block;font-size:15.5px;line-height:1.3}
+.menu .mi .muted{font-size:13px;margin-top:3px}
+.menu .mk{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:13px}
+.menu .mk span{display:inline-flex;align-items:center;gap:6px}
+.mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;padding:0 10px;border:0;border-radius:10px;background:none;
+  text-align:left;text-decoration:none;font-weight:550;color:var(--ink)}
+button.mrow:hover,a.mrow:hover{background:var(--mist)}
+.mrow.who{font-weight:400;color:var(--muted);border-top:1px solid var(--mist);border-radius:0;margin-top:4px}
+
+.locate{position:fixed;z-index:9;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);width:44px;height:44px;border-radius:14px;border:0;
+  background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--ink)}
 .locate svg{width:21px;height:21px}
-@media (min-width:900px){.locate{right:20px;bottom:28px}}
+@media (min-width:900px){.locate{right:20px;top:20px}}
+.zhint{position:fixed;z-index:11;left:50%;bottom:calc(var(--dock-h,80px) + 14px);transform:translate(-50%,6px);background:rgba(29,26,38,.86);color:#fff;
+  border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.zhint.show{opacity:1;transform:translate(-50%,0)}
 
 /* list view */
-.list{position:fixed;z-index:8;inset:0;background:var(--mist);overflow:auto;padding:12px 12px calc(var(--box-h,220px) + 30px)}
-@media (min-width:900px){.list{left:420px;padding:20px 20px 40px}}
+.list{position:fixed;z-index:8;inset:0;background:var(--mist);overflow:auto;padding:12px 12px calc(var(--dock-h,80px) + 24px)}
+@media (min-width:900px){.list{padding:20px 20px calc(var(--dock-h,80px) + 30px)}}
 .list-inner{max-width:640px;margin:0 auto}
 .list .bar{display:flex;gap:8px;position:sticky;top:0;padding:8px 0;background:var(--mist);z-index:1}
 .list .bar input{flex:1;min-width:0}
@@ -210,8 +253,9 @@ dl.city dd.blank{color:#a19da6;font-style:italic}
      Land Bank's programs (CHOICES below), so every land bank map can be
      compared with every other one, lot by lot.
 
-   Voting, on both: tap a lot to open it; each tap after that moves your
-   vote to the next answer, then to no vote. Saved once the taps stop.
+   Voting, on both: tap a lot to select it, then tap a color in the bar.
+   Tap your color again to take the vote back; another color moves it.
+   Saved once the taps stop.
 
    The lots are the City of Cleveland's land bank inventory, read live from
    its open data portal (and kept in the browser until the city edits it).
@@ -229,6 +273,7 @@ const CONFIG = {
   listLimit: 200,            // rows shown at once in the list view
   refreshSeconds: 20,        // how often an open map picks up other people's votes
   saveDelay: 800,            // ms after the last tap on a lot before its vote is saved
+  selectZoom: 15,            // lots can be selected (and voted on) only at this zoom or closer
   // The shared record. The publishable key is meant to be public; the database only allows the pv_* functions.
   supabaseUrl: "https://gftqwwxmtkjipnixuwif.supabase.co",
   supabaseKey: "sb_publishable_qsEiLPwrqJY_dD5u7X15fQ_oR-S8WI4"
@@ -295,7 +340,6 @@ function metersBetween(a, b) {   // [lng, lat] pairs
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[1])) * Math.cos(r(b[1])) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-const OUT_OF_VOTES = "You've used all your votes. Tap one of your lots to change it.";
 const ERR = {
   code_not_found: "That code isn't on any map. Check it and try again.",
   not_member: "Enter your invite code to vote.",
@@ -538,7 +582,7 @@ const S = {
   fc: null, byId: new Map(), ids: [], fields: [], parcelsError: null,
   map: null, A: [YES], AK: {}, zero: [0], budgets: {}, totals: [0],
   code: null, member: null, group: null, tally: new Map(), mine: new Map(), max: 0,
-  view: "everyone", mode: "map", sel: null, others: [], recOpen: false, msg: null, me: null,
+  view: "mine", mode: "map", sel: null, others: [], more: false, menu: false, skipped: new Set(), me: null,
   listQuery: "", listSort: "votes"
 };
 let parcelsReady = null, gl = null;
@@ -564,7 +608,7 @@ async function joinLink(code) {
 function setPage(html) {
   document.body.classList.remove("on-map"); $("#map").hidden = true; clearInterval(liveTimer);
   if (S.sel && gl) setSel(S.sel, false);
-  S.sel = null;
+  S.sel = null; S.menu = false;
   $("#app").innerHTML = html; window.scrollTo(0, 0);
 }
 const errPage = (e, back = "#/") => setPage(`<main class="page"><a class="back" href="${back}">← All maps</a><h1>${esc(errText(e))}</h1><button class="btn" onclick="route()">Try again</button></main>`);
@@ -777,10 +821,27 @@ async function showAbout(id) {
 }
 
 /* =====================================================================
-   The map. Everything lives in one box: the question and turnout, the
-   key (which is also the tally and the votes you have left), the open
-   lot, and your invite code.
+   The map. On screen: the map, one bar of choices, and (with a lot
+   selected) the lot's card. Everything that isn't voting is under ⋯.
+   Tap a lot to select it, then tap a color to vote. Tap your color again
+   to take the vote back; tap another color to move it.
    ===================================================================== */
+const ICON = {
+  mine: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6"/></svg>`,
+  everyone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="16.6" cy="7.4" r="2.6"/><path d="M16.4 12.5c2.5 0 4.4 1.6 4.9 4.4"/></svg>`,
+  more: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`,
+  next: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>`,
+  locate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.2"/></svg>`
+};
+// The one hint ("Tap a color to vote.") shows until this browser's first vote, then never again.
+const VOTED_KEY = "plvt:voted-once";
+let votedOnce = !!ls.get(VOTED_KEY);
+function markVoted() { if (!votedOnce) { votedOnce = true; ls.set(VOTED_KEY, 1); } }
+const isWide = () => matchMedia("(min-width: 900px)").matches;
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function shake(el) { if (!el) return; el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+const answerName = a => a.key === "yes" ? "Yes" : a.label;
+
 function setAnswers(m) {
   S.A = answersOf(m); S.AK = Object.fromEntries(S.A.map((a, i) => [a.key, { ...a, i }]));
   S.zero = S.A.map(() => 0); S.budgets = budgetsOf(m);
@@ -789,25 +850,30 @@ async function showMap(id, lot) {
   let m; try { m = await Store.map(id); } catch (e) { return errPage(e); }
   const switching = !S.map || S.map.id !== id;
   if (S.sel && gl) setSel(S.sel, false);
-  S.map = m; setAnswers(m); S.code = myCodes.get(id); S.member = S.group = null; S.sel = null; S.msg = null; S.others = [];
-  if (switching) { S.view = "everyone"; S.mode = "map"; S.listQuery = ""; S.listSort = "votes"; S.recOpen = false; S.tally = new Map(); S.mine = new Map(); }
+  S.map = m; setAnswers(m); S.code = myCodes.get(id); S.member = S.group = null; S.sel = null; S.others = []; S.more = false; S.menu = false;
+  if (switching) { S.view = "mine"; S.mode = "map"; S.listQuery = ""; S.listSort = "votes"; S.tally = new Map(); S.mine = new Map(); S.skipped = new Set(); }
   if (S.code) {
     try { const r = await Store.join(S.code); if (r.map === id) { S.member = r.member; S.group = r.label; } else S.code = null; }
     catch (e) { if (String(e.message) === "code_not_found") myCodes.del(id); else toast(errText(e)); S.code = null; }
   }
-  if (!S.code) S.view = "everyone";
   document.body.classList.add("on-map");
-  $("#app").innerHTML = `<section class="box" data-box aria-label="Votes"><div data-top></div><div data-lot></div><div class="sec" data-foot></div></section>
-    <button class="locate" data-locate aria-label="Center the map on me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.2"/></svg></button>
-    <div class="list" data-list hidden></div>`;
-  $("[data-locate]").onclick = () => locate(true);
+  $("#app").innerHTML = `<div class="list" data-list hidden></div>
+    <button class="locate" data-locate aria-label="Center the map on me">${ICON.locate}</button>
+    <div class="zhint" data-zhint role="status"></div>
+    <div class="dock" data-dock>
+      <section class="card" data-card hidden aria-label="Selected lot"></section>
+      <div class="menu" data-menu hidden></div>
+      <nav class="vbar" data-bar aria-label="Vote"></nav>
+      <form class="idbar" data-join hidden><label class="sr" for="m-code">Invite code</label><input id="m-code" class="code-input" placeholder="Invite code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn btn-dark">Join</button></form>
+    </div>`;
+  wireMap();
   try { await refresh(); } catch (e) { return errPage(e); }
   if (S.map?.id !== id) return;
-  renderTop(); renderLot(); renderFoot();
+  buildBar(); renderId(); renderCard();
   if (!S.fc) {
-    $("[data-top]").insertAdjacentHTML("beforeend", `<div class="stats" data-wait>Loading the city's lots…</div>`);
+    hintPill("Loading lots…", 0);
     try { await parcelsReady; } catch {}
-    $("[data-wait]")?.remove();
+    hintPill(null);
     if (!S.fc) { toast(`The city's lots didn't load. ${S.parcelsError || ""}`, 8000); return; }
   }
   await ensureMap();
@@ -818,6 +884,59 @@ async function showMap(id, lot) {
   else if (switching && matchMedia("(pointer: coarse)").matches) locate(false);   // on phones, start where the voter is
   startLive();
 }
+// The page's own controls, wired once per map visit.
+function wireMap() {
+  const dock = $("[data-dock]"), card = $("[data-card]");
+  const sizes = () => {
+    const bar = $("[data-bar]"), idb = $("[data-join]"), r = document.documentElement.style;
+    r.setProperty("--dock-h", `${dock.offsetHeight}px`);
+    r.setProperty("--bar-h", `${bar.offsetHeight + (idb.hidden ? 0 : idb.offsetHeight + 8) + 18}px`);
+  };
+  new ResizeObserver(sizes).observe(dock); sizes();
+  $("[data-locate]").onclick = () => locate(true);
+  $("[data-bar]").onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.sq) tapSquare(b.dataset.sq, b);
+    else if (b.hasAttribute("data-view")) { S.view = S.view === "mine" ? "everyone" : "mine"; applyView(); updateBar(); }
+    else if (b.hasAttribute("data-more")) { S.menu = !S.menu; renderMenu(); }
+  };
+  $("[data-join]").onsubmit = async e => {
+    e.preventDefault(); const form = e.currentTarget, raw = $("#m-code").value;
+    if (!normCode(raw)) { shake(form); $("#m-code").focus(); return; }
+    try {
+      const r = await Store.join(raw);
+      myCodes.set(r.map, normCode(raw));
+      if (r.map !== S.map.id) { location.hash = `#/m/${r.map}`; return; }   // a code for another map: go there
+      S.code = normCode(raw); S.member = r.member; S.group = r.label;
+      await refresh(); paintAll(); renderId(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList();
+      $("#m-code").blur();
+    } catch (err) { shake(form); toast(errText(err)); }
+  };
+  // Swipe the card down to let go of the lot; swipe left for the next lot nearby.
+  let sw = null;
+  card.addEventListener("touchstart", e => { const t = e.touches[0]; sw = { x: t.clientX, y: t.clientY, top: card.scrollTop }; }, { passive: true });
+  card.addEventListener("touchmove", e => {
+    if (!sw || isWide()) return; const t = e.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+    if (sw.top <= 0 && dy > 0 && dy > Math.abs(dx)) card.style.transform = `translateY(${dy}px)`;
+    else if (dx < 0 && -dx > Math.abs(dy)) card.style.transform = `translateX(${dx / 2}px)`;
+  }, { passive: true });
+  card.addEventListener("touchend", e => {
+    if (!sw) return; const t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, top = sw.top; sw = null;
+    card.style.transition = "transform .18s"; card.style.transform = ""; setTimeout(() => card.style.transition = "", 200);
+    if (isWide()) return;
+    if (top <= 0 && dy > 60 && dy > Math.abs(dx) * 1.4) closeLot();
+    else if (dx < -60 && -dx > Math.abs(dy) * 1.4) nextNearby();
+  }, { passive: true });
+}
+document.addEventListener("pointerdown", e => { if (S.menu && !e.target.closest("[data-menu],[data-more]")) { S.menu = false; renderMenu(); } });
+document.addEventListener("keydown", e => {
+  if (!document.body.classList.contains("on-map") || e.target.closest("input,select,textarea")) return;
+  if (e.key === "Escape") { if (S.menu) { S.menu = false; renderMenu(); } else closeLot(); }
+  else if (e.key === "ArrowRight" && S.sel) nextNearby();
+});
+let resizeT = 0;
+window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.body.classList.contains("on-map") && S.sel) { renderCard(); keepInView(S.sel); } }, 150); });
+
 // Other people's votes: picked up every few seconds while a map is open and on screen, never while your own taps are being saved.
 let liveTimer = 0, liveBusy = false;
 function startLive() {
@@ -825,7 +944,7 @@ function startLive() {
   liveTimer = setInterval(async () => {
     if (document.hidden || liveBusy || pending.size || inflight || !S.map || !document.body.classList.contains("on-map")) return;
     liveBusy = true;
-    try { if (!(await refresh(true))) return; paintAll(); renderTop(); renderLot(); if (S.mode === "list") renderList(); }
+    try { if (!(await refresh(true))) return; paintAll(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList(); }
     catch {} finally { liveBusy = false; }
   }, CONFIG.refreshSeconds * 1000);
 }
@@ -837,11 +956,13 @@ async function refresh(ifIdle = false) {
   if (ifIdle && (pending.size || inflight)) return false;
   S.tally = t; S.mine = mine; S.map = m; S.budgets = budgetsOf(m);
   S.totals = m.kind === "land_bank" ? CHOICES.map(c => m.by?.[c.key] || 0) : [m.votes];
+  if (mine.size) markVoted();
   setMax(); return true;
 }
-function setMax() { S.max = 0; for (const n of S.tally.values()) S.max = Math.max(S.max, sum(n)); }
+// Agreement: the leading answer's votes on a lot, in five steps relative to the lot where most members agree.
+function setMax() { S.max = 0; for (const n of S.tally.values()) S.max = Math.max(S.max, Math.max(...n)); }
 const counts = id => S.tally.get(id) || S.zero;
-const level = id => { const t = sum(counts(id)); return t ? Math.max(1, Math.ceil(5 * t / (S.max || 1))) : 0; };
+const level = id => { const n = counts(id); return sum(n) ? Math.max(1, Math.ceil(5 * Math.max(...n) / (S.max || 1))) : 0; };
 // The leading answer: a key, "tie", or null with no votes.
 function leadingOf(n, A) { const t = sum(n); if (!t) return null; const top = Math.max(...n); return n.filter(x => x === top).length > 1 ? "tie" : A[n.indexOf(top)].key; }
 const leading = n => leadingOf(n, S.A);
@@ -849,39 +970,98 @@ const colorOf = id => { const l = leading(counts(id)), c = level(id); return !l 
 const used = k => { let n = 0; for (const c of S.mine.values()) if (c === k) n++; return n; };
 const left = k => Math.max(0, (S.budgets[k] || 0) - used(k));
 
-// Top: name, links, the question, turnout.
-function renderTop() {
-  const el = $("[data-top]"); if (!el) return;
-  const m = S.map, votes = sum(S.totals), lots = S.tally.size;
-  el.innerHTML = `<div class="bt"><a class="name" href="#/">← Public Land Voting Tool</a><span class="row" style="gap:12px"><a class="link quiet" href="#/m/${m.id}/about">About</a><button class="link quiet" data-dl>Download</button></span></div>
-    <h1>${esc(m.question)}</h1>
-    <div class="stats">${m.steward ? `${esc(m.steward)} · ` : ""}<b>${fmt(m.used)}</b> of ${plural(m.issued, "member", "members")} · <b>${fmt(votes)}</b> ${votes === 1 ? "vote" : "votes"} on ${plural(lots, "lot", "lots")}${m.onsite ? " · votes count only at the lot" : ""}</div>`;
-  $("[data-dl]", el).onclick = () => downloadVotes(m.id);
-  boxSize();
+/* --- the bar: a square per answer (votes left), whose votes, and ⋯ --- */
+function buildBar() {
+  const el = $("[data-bar]"); if (!el) return;
+  el.innerHTML = S.A.map(a => `<button class="sq" data-sq="${a.key}" style="--c:${a.ramp[3]}"><span class="n"></span></button>`).join("")
+    + `<button class="ib" data-view></button><button class="ib" data-more aria-label="More" aria-haspopup="true" aria-expanded="false">${ICON.more}</button>`;
+  updateBar(true);
 }
-// Middle: the open lot (if any) and the key, which doubles as the tally and your votes left.
-function renderLot() {
-  const el = $("[data-lot]"); if (!el) return;
-  const id = S.sel, p = id && S.byId.get(id)?.properties, n = id ? counts(id) : null, mineHere = id ? S.mine.get(id) : null;
-  const mineView = S.view === "mine", lb = S.A.length > 1;
-  const cols = [mineView ? "Yours" : "All lots", ...(id ? ["This lot"] : []), ...(S.code ? ["Left"] : [])];
+function updateBar(first) {
+  const el = $("[data-bar]"); if (!el) return;
+  const id = S.sel, cur = id ? S.mine.get(id) : null;
+  el.classList.toggle("lit", !!id);
+  for (const b of $$("[data-sq]", el)) {
+    const a = S.AK[b.dataset.sq], n = S.code ? left(a.key) : (S.budgets[a.key] || 0), nEl = $(".n", b), old = nEl.textContent === "" ? null : +nEl.textContent;
+    b.classList.toggle("cur", cur === a.key);
+    b.setAttribute("aria-pressed", String(cur === a.key));
+    b.setAttribute("aria-label", `${a.key === "yes" ? S.map.question : a.label}: ${n} left`);
+    b.title = a.key === "yes" ? S.map.question : a.label;
+    b.disabled = false; b.tabIndex = id ? 0 : -1;
+    if (old !== n) {
+      nEl.textContent = n;
+      if (!first && old !== null && !calm()) { nEl.classList.remove("up", "down"); void nEl.offsetWidth; nEl.classList.add(n < old ? "down" : "up"); }
+    }
+  }
+  const v = $("[data-view]", el), mine = S.view === "mine";
+  v.innerHTML = mine ? ICON.mine : ICON.everyone;
+  v.setAttribute("aria-label", mine ? "Your votes. Show everyone's" : "Everyone's votes. Show yours");
+  v.title = mine ? "Your votes" : "Everyone's votes";
+}
+function tapSquare(key, b) {
+  const id = S.sel; if (!id) return;   // no lot selected: the squares are the key
+  if (!S.code) { const f = $("[data-join]"); shake(f); $("#m-code")?.focus(); return; }
+  const cur = S.mine.get(id) || null;
+  if (cur === key) { setChoice(id, null); feedback(id, null); return; }   // same color: take it back
+  if (left(key) <= 0) { shake(b); return; }                                // none left of that color
+  setChoice(id, key); feedback(id, key); markVoted();                      // new vote, or moved from another color
+}
+function feedback(id, key) {
+  try { navigator.vibrate?.(10); } catch {}
+  flashLot(id, key);
+}
+
+/* --- the identity bar: only until this device has an invite code for the map --- */
+function renderId() {
+  const f = $("[data-join]"); if (!f) return;
+  f.hidden = !!S.code;
+}
+
+/* --- the ⋯ menu: the map's question and terms, the list, About, download, sign out --- */
+function renderMenu() {
+  const el = $("[data-menu]"); if (!el) return;
+  el.hidden = !S.menu; $("[data-more]")?.setAttribute("aria-expanded", String(!!S.menu)); $("[data-dock]")?.classList.toggle("menu-open", !!S.menu);
+  if (!S.menu) return;
+  const m = S.map, votes = sum(S.totals);
+  const terms = [m.steward ? esc(m.steward) : "", `${esc(budgetText(m))} each`, m.onsite ? "votes count only at the lot" : ""].filter(Boolean).join(" · ");
+  el.innerHTML = `<div class="mi"><b>${esc(m.question)}</b><div class="muted">${terms}</div>
+      <div class="muted">${fmt(m.used)} of ${plural(m.issued, "member", "members")} voted · ${plural(votes, "vote", "votes")} on ${plural(S.tally.size, "lot", "lots")}</div>
+      ${S.A.length > 1 ? `<div class="mk">${S.A.map(a => `<span><i class="sw" style="background:${a.ramp[3]}"></i>${esc(a.label)}</span>`).join("")}<span><i class="sw" style="background:${TIE[3]}"></i>Tie</span></div>` : ""}</div>
+    <button class="mrow" data-mode>${S.mode === "list" ? "Show the map" : "List of lots"}</button>
+    <a class="mrow" href="#/m/${m.id}/about">About this map</a>
+    <button class="mrow" data-dl>Download votes</button>
+    <a class="mrow" href="#/">All maps</a>
+    ${S.code ? `<div class="mrow who"><span>Member ${S.member}${S.group ? ` · ${esc(S.group)}` : ""}</span><button class="link quiet" data-leave>Sign out</button></div>` : ""}`;
+  $("[data-mode]", el).onclick = () => { S.mode = S.mode === "list" ? "map" : "list"; if (S.mode === "list") closeLot(); S.menu = false; renderMenu(); applyView(); };
+  $("[data-dl]", el).onclick = () => { S.menu = false; renderMenu(); downloadVotes(m.id); };
+  $("[data-leave]", el)?.addEventListener("click", () => {
+    flushAll(); myCodes.del(S.map.id); S.code = S.member = S.group = null; S.mine = new Map(); S.menu = false;
+    paintAll(); applyView(); renderMenu(); renderId(); updateBar(); renderCard();
+  });
+}
+
+/* --- the card: the selected lot --- */
+function renderCard(fresh) {
+  const el = $("[data-card]"); if (!el) return;
+  const id = S.sel; el.hidden = !id || S.mode === "list";
+  if (el.hidden) return;
+  const p = S.byId.get(id).properties, addr = parseAddress(p.city?.[CONFIG.addressField])?.full;
+  const cur = S.mine.get(id), n = counts(id), wide = isWide(), open = wide || S.more;
+  const near = addr ? p.d : (/^Parcel /.test(p.a) ? "" : p.a);
   const val = v => v === null || v === undefined || String(v).trim() === "" ? null : typeof v === "number" ? fmt(v) : String(v);
-  el.innerHTML = `<div class="sec">
-    ${p ? `<div class="lot-h"><div><b>${esc(p.a)}</b><span class="pin">${esc(p.d)}</span></div><button class="x" data-close aria-label="Close lot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>` : ""}
-    <table class="key"><thead><tr><th><span class="sr">Answer</span></th>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
-      ${S.A.map((a, i) => { const all = mineView ? used(a.key) : S.totals[i], b = S.budgets[a.key] || 0;
-        return `<tr><td><i class="sw" style="background:${a.ramp[3]}"></i>${esc(a.label)}</td><td class="${all ? "" : "z"}">${fmt(all)}</td>
-          ${id ? `<td class="${mineHere === a.key ? "you" : n[i] ? "" : "z"}">${fmt(n[i])}</td>` : ""}
-          ${S.code ? `<td class="${b ? "" : "z"}">${b ? fmt(left(a.key)) : "–"}</td>` : ""}</tr>`; }).join("")}
-    </tbody></table>
-    <div class="note">${mineView ? "Showing only your votes." : `${lb ? `<i class="sw" style="background:${TIE[3]}"></i>Tie · ` : ""}Darker: more votes`}</div>
-    ${S.msg ? `<div class="msg${S.msg.bad ? " bad" : ""}">${esc(S.msg.text)}</div>` : hint() ? `<div class="msg">${esc(hint())}</div>` : ""}
-    ${p ? `<details data-rec ${S.recOpen ? "open" : ""}><summary>City record</summary><dl class="city">${S.fields.map(f => { const v = val(p.city[f.name]); return `<dt>${esc(f.alias)}</dt><dd class="${v === null ? "blank" : ""}">${v === null ? "Blank" : esc(v)}</dd>`; }).join("")}</dl></details>
-      ${S.others.length ? `<div class="others"><div class="quiet">On other maps</div>${S.others.map(o => `<a href="#/m/${o.id}?lot=${id}">${otherLine(o)} <span class="on">→</span></a>`).join("")}</div>` : ""}` : ""}
-  </div>`;
-  $("[data-close]", el)?.addEventListener("click", () => closeLot());
-  $("[data-rec]", el)?.addEventListener("toggle", e => { S.recOpen = e.target.open; const now = $("[data-lot] [data-rec]"); if (now && now !== e.target) now.open = S.recOpen; });
-  boxSize();
+  if (fresh && !calm()) { el.classList.remove("in"); void el.offsetWidth; el.classList.add("in"); }
+  el.innerHTML = `<div class="ch"><div class="ct"><b>${esc(addr || p.d)}</b>
+      <div class="cr">${cur ? `<span class="you"><i class="sw" style="background:${S.AK[cur].ramp[3]}"></i>${esc(answerName(S.AK[cur]))}</span>` : !votedOnce ? `<span class="tip">Tap a color to vote.</span>` : ""}
+        <span class="sp"></span>${wide ? "" : `<button class="link quiet" data-moreinfo aria-expanded="${open}">${open ? "Less" : "More"}</button>`}</div></div>
+      <button class="nx" data-next aria-label="Next lot nearby" title="Next lot nearby">${ICON.next}</button></div>
+    ${open ? `<div class="cx">
+      ${near ? `<div class="pin">${esc(near)}</div>` : ""}
+      <table class="tl"><tbody>${S.A.map((a, i) => `<tr class="${cur === a.key ? "me" : ""}"><td><i class="sw" style="background:${a.ramp[3]}"></i>${esc(a.key === "yes" ? "Votes" : a.label)}</td><td class="num">${fmt(n[i])}</td></tr>`).join("")}</tbody></table>
+      <h3>City record</h3><dl class="city">${S.fields.map(f => { const v = val(p.city[f.name]); return `<dt>${esc(f.alias)}</dt><dd class="${v === null ? "blank" : ""}">${v === null ? "Blank" : esc(v)}</dd>`; }).join("")}</dl>
+      ${S.others.length ? `<h3>On other maps</h3><div class="others">${S.others.map(o => `<a href="#/m/${o.id}?lot=${id}">${otherLine(o)} <span class="on">→</span></a>`).join("")}</div>` : ""}
+    </div>` : ""}`;
+  $("[data-next]", el).onclick = () => nextNearby();
+  $("[data-moreinfo]", el)?.addEventListener("click", () => { S.more = !S.more; renderCard(); keepInView(id); });
 }
 // "Ward 7 office · Development 3 · Open space 1" for a land bank map; the question and its votes for a question map.
 function otherLine(o) {
@@ -891,49 +1071,15 @@ function otherLine(o) {
   }
   return `<span class="oq">${esc(o.question)}</span> <span class="on">· ${plural(o.votes, "vote", "votes")}${o.steward ? ` · ${esc(o.steward)}` : ""}</span>`;
 }
-// Only until a member's first vote: how tapping works.
-function hint() {
-  if (!S.code || S.mine.size) return "";
-  return S.sel ? "Tap the lot again to vote. Each tap moves to the next choice." : "Tap a lot to open it, then tap again to vote.";
+let pillT = 0;
+function hintPill(text, ms = 1400) {
+  const el = $("[data-zhint]"); if (!el) return; clearTimeout(pillT);
+  if (!text) { el.classList.remove("show"); return; }
+  el.textContent = text; el.classList.add("show");
+  if (ms) pillT = setTimeout(() => el.classList.remove("show"), ms);
 }
-// Bottom: the invite code, and the view switches.
-function renderFoot() {
-  const el = $("[data-foot]"); if (!el) return;
-  el.innerHTML = `${S.code ? `<div class="foot"><span><b>Member ${S.member}</b>${S.group ? ` <span class="muted">· ${esc(S.group)}</span>` : ""}</span><button class="link quiet" data-leave>Not you?</button></div>`
-    : `<form class="join" data-join><label class="sr" for="m-code">Invite code</label><input class="text code-input" id="m-code" placeholder="Invite code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn btn-dark btn-sm">Join</button></form><div class="form-msg" data-msg hidden></div>`}
-    <div class="ctl"><div class="seg" role="group" aria-label="Whose votes"><button data-view="everyone" aria-pressed="${S.view === "everyone"}">Everyone</button><button data-view="mine" aria-pressed="${S.view === "mine"}" ${S.code ? "" : "disabled"}>Mine</button></div>
-      <div class="seg" role="group" aria-label="Show as"><button data-mode="map" aria-pressed="${S.mode === "map"}">Map</button><button data-mode="list" aria-pressed="${S.mode === "list"}">List</button></div></div>`;
-  $$("[data-view]", el).forEach(b => b.onclick = () => { S.view = b.dataset.view; renderFoot(); renderLot(); applyView(); });
-  $$("[data-mode]", el).forEach(b => b.onclick = () => { S.mode = b.dataset.mode; renderFoot(); applyView(); });
-  $("[data-leave]", el)?.addEventListener("click", () => { flushAll(); myCodes.del(S.map.id); S.code = S.member = S.group = null; S.mine = new Map(); S.view = "everyone"; S.msg = null; paintAll(); applyView(); renderLot(); renderFoot(); });
-  $("[data-join]", el)?.addEventListener("submit", async e => {
-    e.preventDefault(); const msg = $("[data-msg]", el), raw = $("#m-code", el).value; msg.hidden = true;
-    try {
-      const r = await Store.join(raw);
-      myCodes.set(r.map, normCode(raw));
-      if (r.map !== S.map.id) { location.hash = `#/m/${r.map}`; return; }   // a code for another map: go there
-      S.code = normCode(raw); S.member = r.member; S.group = r.label; S.msg = null;
-      await refresh(); paintAll(); renderTop(); renderLot(); renderFoot(); if (S.mode === "list") renderList();
-    } catch (err) { msg.textContent = errText(err); msg.hidden = false; }
-  });
-  boxSize();
-}
-function boxSize() { const b = $("[data-box]"); if (b) document.documentElement.style.setProperty("--box-h", `${b.offsetHeight}px`); }
 
-/* --- voting: tap a lot to open it; each tap after that moves its vote to the next answer, then to no vote --- */
-function tapLot(id) {
-  if (S.sel !== id) return select(id);
-  if (!S.code) { S.msg = { text: ERR.not_member, bad: true }; renderLot(); $("#m-code")?.focus(); return; }
-  const cur = S.mine.get(id) || null, next = nextChoice(cur);
-  S.msg = !cur && !next ? { text: OUT_OF_VOTES, bad: true } : null;
-  if (cur || next) setChoice(id, next); else renderLot();
-}
-// The next answer after this one that still has votes left; null (no vote) after the last.
-function nextChoice(cur) {
-  for (let i = cur ? S.AK[cur].i + 1 : 0; i < S.A.length; i++) if (left(S.A[i].key) > 0) return S.A[i].key;
-  return null;
-}
-// Change the vote on screen at once; save it once the taps on that lot stop (three quick taps, one write).
+/* --- votes: shown at once, saved once the taps on that lot stop (three quick taps, one write) --- */
 const pending = new Map();   // lot -> { from, to, timer, code, map, onsite }
 const chains = new Map();    // lot -> the save in flight, so saves on one lot go out in order
 let inflight = 0;
@@ -947,7 +1093,7 @@ function setChoice(id, to) {
   const p = pending.get(id) || { from: cur, code: S.code, map: S.map.id, onsite: S.map.onsite };
   clearTimeout(p.timer); p.to = to; p.timer = setTimeout(() => flush(id), CONFIG.saveDelay);
   pending.set(id, p);
-  paintAll(); renderTop(); renderLot(); if (S.mode === "list") renderList();
+  paintAll(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList();
 }
 function flush(id) {
   const p = pending.get(id); if (!p) return;
@@ -955,7 +1101,7 @@ function flush(id) {
   if (p.to === p.from) return settle();
   inflight++;
   const run = (chains.get(id) || Promise.resolve()).then(() => save(id, p))
-    .catch(e => { if (S.map?.id === p.map) S.msg = { text: errText(e), bad: true }; })
+    .catch(e => { if (S.map?.id === p.map) toast(errText(e), 6000); })
     .finally(() => { inflight--; if (chains.get(id) === run) chains.delete(id); settle(); });
   chains.set(id, run);
 }
@@ -972,20 +1118,37 @@ async function save(id, p) {
 function flushAll() { for (const id of [...pending.keys()]) flush(id); }
 async function settle() {   // once every tap is saved, read the record back
   if (pending.size || inflight || !S.map) return;
-  try { if (!(await refresh(true))) return; } catch (e) { S.msg = { text: errText(e), bad: true }; }
-  paintAll(); renderTop(); renderLot(); if (S.mode === "list") renderList();
+  try { if (!(await refresh(true))) return; } catch (e) { toast(errText(e)); }
+  if (!document.body.classList.contains("on-map")) return;
+  paintAll(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList();
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) flushAll(); });
 window.addEventListener("pagehide", flushAll);
 
+/* --- selecting lots --- */
 async function select(id) {
   if (S.sel && S.sel !== id) setSel(S.sel, false);
-  S.sel = id; S.others = []; S.msg = null; setSel(id, true);
-  renderLot(); keepInView(id);
+  const fresh = !S.sel;
+  S.sel = id; S.others = []; setSel(id, true);
+  if (S.menu) { S.menu = false; renderMenu(); }
+  renderCard(fresh); updateBar(); keepInView(id);
   let others = []; try { others = (await Store.lotMaps(id)).filter(o => o.id !== S.map.id); } catch {}
-  if (S.sel === id) { S.others = others; if (others.length) renderLot(); }
+  if (S.sel === id) { S.others = others; if (others.length) renderCard(); }
 }
-function closeLot() { if (S.sel) setSel(S.sel, false); S.sel = null; S.msg = null; S.others = []; renderLot(); }
+function closeLot() { if (!S.sel) return; setSel(S.sel, false); S.sel = null; S.more = false; S.others = []; renderCard(); updateBar(); }
+// The closest lot you haven't voted on (and haven't stepped past with this button).
+function nextNearby() {
+  if (!S.sel) return;
+  const from = S.byId.get(S.sel).properties, kx = Math.cos(from.cy * Math.PI / 180);
+  S.skipped.add(S.sel);
+  let best = null, bd = Infinity;
+  for (const f of S.fc.features) {
+    const p = f.properties; if (S.mine.has(p.id) || S.skipped.has(p.id)) continue;
+    const d = ((p.cx - from.cx) * kx) ** 2 + (p.cy - from.cy) ** 2; if (d < bd) { bd = d; best = p.id; }
+  }
+  if (!best) return shake($("[data-next]"));
+  select(best);
+}
 function position(fresh) {   // fresh: on-site votes need where the voter is now, not a minute ago
   return new Promise((ok, no) => {
     if (!navigator.geolocation) return no(new Error("This browser can't share its location."));
@@ -999,10 +1162,11 @@ async function locate(loud) {
   catch (e) { if (loud) toast(e.message); }
 }
 
-/* --- list view: every lot, including the ones without addresses --- */
+/* --- list view (under ⋯): every lot, including the ones without addresses --- */
 function renderList() {
   const el = $("[data-list]"); if (!el) return;
-  el.hidden = S.mode !== "list"; if (el.hidden) return;
+  el.hidden = S.mode !== "list"; const loc = $("[data-locate]"); if (loc) loc.hidden = !el.hidden;
+  if (el.hidden) return;
   const q = S.listQuery.trim().toLowerCase(), qn = normId(q);
   let ids = S.ids;
   if (S.view === "mine") ids = ids.filter(id => S.mine.has(id));
@@ -1023,11 +1187,11 @@ function renderList() {
   const qi = $("#l-q", el); qi.oninput = () => { S.listQuery = qi.value; renderList(); };
   if (keep) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
   $("#l-s", el).onchange = e => { S.listSort = e.target.value; renderList(); };
-  $$("[data-lot]", el).forEach(b => b.onclick = () => { const id = b.dataset.lot; S.mode = "map"; renderFoot(); applyView(); flyTo(id); select(id); });
+  $$("[data-lot]", el).forEach(b => b.onclick = () => { const id = b.dataset.lot; S.mode = "map"; applyView(); flyTo(id); select(id); });
 }
 
 /* --- drawing the map --- */
-// Feature state per lot: k = leading answer (1-3, 9 tie, 0 none), c = darkness (0-5), m = your answer (1-3, 0 none), s = open.
+// Feature state per lot: k = leading answer (1-3, 9 tie, 0 none), c = agreement (0-5), m = your answer (1-3, 0 none), s = selected.
 const painted = new Map();
 function fsSet(id, st) { gl.setFeatureState({ source: "parcels", id }, st); gl.setFeatureState({ source: "pts", id }, st); }
 function paint(id) {
@@ -1036,15 +1200,42 @@ function paint(id) {
 }
 function paintAll() { if (gl) for (const id of S.ids) paint(id); }
 function setSel(id, on) { if (gl) fsSet(id, { s: on }); }
+// Mine: your lots solid in your color, the rest bare outlines. Everyone: the leading answer's color, stronger where more members agree.
+const AGREE = [0.4, 0.55, 0.7, 0.82, 0.92];
 function applyView() {
-  if (!gl) return;
+  if (!gl) return renderList();
   const k = ["coalesce", ["feature-state", "k"], 0], c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0];
-  const pairs = [...S.A.map((a, i) => [i + 1, a.ramp]), [9, TIE]].flatMap(([ki, r]) => r.flatMap((col, ci) => [ki * 10 + ci + 1, col]));
-  const fill = S.view === "mine" ? ["match", m, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), "#FFFFFF"] : ["match", ["+", ["*", k, 10], c], ...pairs, "#FFFFFF"];
-  const op = S.view === "mine" ? ["match", m, 0, 0.12, 0.92] : ["match", c, 0, CONFIG.emptyOpacity, 0.92];
+  const mineView = S.view === "mine";
+  const fill = mineView ? ["match", m, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), "#FFFFFF"]
+    : ["match", k, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), 9, TIE[3], "#FFFFFF"];
+  const op = mineView ? ["match", m, 0, 0, 0.92] : ["match", c, 0, CONFIG.emptyOpacity, ...AGREE.slice(0, 4).flatMap((o, i) => [i + 1, o]), AGREE[4]];
+  const has = mineView ? [">", m, 0] : [">", c, 0];
   gl.setPaintProperty("lots-fill", "fill-color", fill); gl.setPaintProperty("lots-fill", "fill-opacity", op);
+  gl.setPaintProperty("lots-case", "line-opacity", mineView ? 0.28 : 0.45);
+  gl.setPaintProperty("lots-line", "line-opacity", mineView ? 0.75 : 0.9);
   gl.setPaintProperty("lots-dots", "circle-color", fill);
+  gl.setPaintProperty("lots-dots", "circle-radius", ["interpolate", ["linear"], ["zoom"], 10, ["case", has, 3, 1.6], 14, ["case", has, 4.6, 2.8]]);
+  gl.setPaintProperty("lots-dots", "circle-opacity", ["interpolate", ["linear"], ["zoom"], 13.6, mineView ? ["case", has, 1, 0] : ["case", has, ["match", c, ...AGREE.flatMap((o, i) => [i + 1, Math.min(1, o + 0.1)]), 1], 1], 14.6, 0]);
   renderList();
+}
+// A vote landing: the lot flashes in the vote's color and a ring spreads from it.
+let flashRaf = 0;
+function flashLot(id, key) {
+  if (!gl || calm() || !gl.getSource("flash")) return;
+  const f = S.byId.get(id); if (!f) return;
+  gl.getSource("flash").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: f.geometry }] });
+  const col = key ? S.AK[key].ramp[3] : "#FFFFFF";
+  gl.setPaintProperty("flash-fill", "fill-color", col); gl.setPaintProperty("flash-ring", "line-color", col);
+  cancelAnimationFrame(flashRaf);
+  const t0 = performance.now(), D = 560;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / D), e = 1 - (1 - t) ** 3;
+    gl.setPaintProperty("flash-fill", "fill-opacity", (key ? 0.95 : 0.85) * (1 - e));
+    gl.setPaintProperty("flash-ring", "line-width", 2 + 16 * e);
+    gl.setPaintProperty("flash-ring", "line-opacity", 0.9 * (1 - t));
+    if (t < 1) flashRaf = requestAnimationFrame(step);
+  };
+  flashRaf = requestAnimationFrame(step);
 }
 async function loadLabels() {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
@@ -1055,25 +1246,28 @@ let labelsP = null;
 async function ensureMap() {
   if (gl) return;
   const lab = await (labelsP ||= loadLabels());
-  const c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0], s = ["boolean", ["feature-state", "s"], false];
+  const c = ["coalesce", ["feature-state", "c"], 0], s = ["boolean", ["feature-state", "s"], false];
+  const none = { duration: 0 };
   const sources = {
     photo: { type: "raster", tiles: [CONFIG.imagery], tileSize: 256, maxzoom: 19, attribution: CONFIG.imageryAttribution },
     parcels: { type: "geojson", data: S.fc, promoteId: "id", tolerance: 0.2 },
     pts: { type: "geojson", promoteId: "id", data: { type: "FeatureCollection", features: S.fc.features.map(f => ({ type: "Feature", properties: { id: f.properties.id }, geometry: { type: "Point", coordinates: [f.properties.cx, f.properties.cy] } })) } },
+    flash: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
     me: { type: "geojson", data: { type: "FeatureCollection", features: [] } }
   };
   const layers = [
     { id: "paper", type: "background", paint: { "background-color": "#FFFFFF" } },
     { id: "photo", type: "raster", source: "photo", paint: { "raster-opacity": CONFIG.imageryOpacity, "raster-saturation": -0.3 } },
-    { id: "lots-fill", type: "fill", source: "parcels", paint: { "fill-color": "#FFFFFF", "fill-opacity": CONFIG.emptyOpacity } },
+    { id: "lots-fill", type: "fill", source: "parcels", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0, "fill-opacity-transition": { duration: 200 } } },
     { id: "lots-case", type: "line", source: "parcels", paint: { "line-color": "#4A4850", "line-opacity": 0.45, "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.6, 15, 1.4, 18, 2.8] } },
     { id: "lots-line", type: "line", source: "parcels", paint: { "line-color": "#FFFFFF", "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.3, 15, 0.8, 18, 1.6] } },
     { id: "lots-dots", type: "circle", source: "pts", maxzoom: 15, paint: {
         "circle-color": "#FFFFFF", "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["case", [">", c, 0], 3, 1.6], 14, ["case", [">", c, 0], 4.6, 2.8]],
         "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0], "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0],
-        "circle-stroke-color": ["case", [">", m, 0], "#1D1A26", "#6F6C74"], "circle-stroke-width": ["case", [">", m, 0], 1.6, 0.5] } },
-    { id: "mine-halo", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#FFFFFF", "line-opacity": ["case", [">", m, 0], 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 13, 2.5, 16, 4.5, 18, 6] } },
-    { id: "mine-line", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#1D1A26", "line-opacity": ["case", [">", m, 0], 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1.2, 16, 2, 18, 2.6] } },
+        "circle-stroke-color": "#6F6C74", "circle-stroke-width": 0.6 } },
+    { id: "flash-fill", type: "fill", source: "flash", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0, "fill-opacity-transition": none, "fill-color-transition": none } },
+    { id: "flash-ring", type: "line", source: "flash", paint: { "line-color": "#FFFFFF", "line-opacity": 0, "line-width": 2, "line-blur": 2, "line-opacity-transition": none, "line-width-transition": none, "line-color-transition": none } },
+    { id: "sel-halo", type: "line", source: "parcels", paint: { "line-color": "#FFFFFF", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 16, 6.5, 18, 8] } },
     { id: "sel-line", type: "line", source: "parcels", paint: { "line-color": "#D6336C", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 16, 3.5, 18, 4.5] } },
     { id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 14, "circle-color": "#2F6FEB", "circle-opacity": 0.18 } },
     { id: "me-dot", type: "circle", source: "me", paint: { "circle-radius": 6, "circle-color": "#2F6FEB", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } }
@@ -1086,7 +1280,9 @@ async function ensureMap() {
     style.layers.push(...lab.layers.filter(l => l.type === "symbol"));
   }
   $("#map").hidden = false;
-  gl = new maplibregl.Map({ container: "map", style, bounds: bbox(), fitBoundsOptions: { padding: 40 }, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false, doubleClickZoom: false, maxZoom: 19.5 });   // taps are votes, so no double-tap zoom
+  gl = new maplibregl.Map({ container: "map", style, bounds: bbox(), fitBoundsOptions: { padding: 40 }, attributionControl: false, dragRotate: false, pitchWithRotate: false, maxZoom: 19.5 });
+  gl.addControl(new maplibregl.AttributionControl({ compact: true }), "top-left");
+  gl.once("idle", () => $(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));   // credits folded behind the (i)
   gl.touchZoomRotate.disableRotation();
   gl.on("error", e => console.warn("Map:", e.error?.message || e));
   gl.on("click", e => {
@@ -1094,20 +1290,23 @@ async function ensureMap() {
     const exact = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill"] });
     const f = exact.length ? exact : gl.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ["lots-fill", "lots-dots"] });
     const hit = f.find(x => x.layer.id === "lots-fill") || f[0];
-    if (hit) tapLot(hit.id ?? normId(hit.properties.id)); else closeLot();
+    if (!hit) return closeLot();
+    if (gl.getZoom() < CONFIG.selectZoom) { closeLot(); return hintPill("Zoom in to vote"); }
+    select(hit.id ?? normId(hit.properties.id));
   });
-  gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length ? "pointer" : ""; });
+  gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length && gl.getZoom() >= CONFIG.selectZoom ? "pointer" : ""; });
   // Feature colors need the lot layers in place; 'load' also waits for every background tile, so don't wait past the style.
   await new Promise(ok => { if (gl.isStyleLoaded()) return ok(); let done = false; const go = () => { if (!done) { done = true; ok(); } }; gl.once("load", go); gl.once("style.load", go); setTimeout(go, 8000); });
 }
-// Keep the open lot in view: right of the box on wide screens, above it on phones.
+// Keep the selected lot in view: right of the card on wide screens, above the card and bar on phones.
 function keepInView(id) {
   if (!gl) return;
-  const p = S.byId.get(id).properties, pt = gl.project([p.cx, p.cy]), W = innerWidth, H = innerHeight, wide = W >= 900;
-  const box = $("[data-box]")?.getBoundingClientRect();
-  const r = wide ? { left: (box?.right || 0) + 20, right: W - 20, top: 20, bottom: H - 20 } : { left: 16, right: W - 16, top: 16, bottom: (box?.top || H) - 16 };
+  const p = S.byId.get(id).properties, pt = gl.project([p.cx, p.cy]), W = innerWidth, H = innerHeight, wide = isWide();
+  const card = $("[data-card]"), dockTop = $("[data-dock]")?.getBoundingClientRect().top ?? H;
+  const r = wide ? { left: (card && !card.hidden ? card.getBoundingClientRect().right : 0) + 24, right: W - 70, top: 24, bottom: dockTop - 16 }
+    : { left: 20, right: W - 20, top: 70, bottom: dockTop - 16 };
   if (pt.x > r.left && pt.x < r.right && pt.y > r.top && pt.y < r.bottom) return;
-  gl.easeTo({ center: [p.cx, p.cy], offset: [(r.left + r.right) / 2 - W / 2, (r.top + r.bottom) / 2 - H / 2], duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350 });
+  gl.easeTo({ center: [p.cx, p.cy], offset: [(r.left + r.right) / 2 - W / 2, (r.top + r.bottom) / 2 - H / 2], duration: calm() ? 0 : 350 });
 }
 function showMe() { gl?.getSource("me")?.setData({ type: "FeatureCollection", features: S.me ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: S.me } }] : [] }); }
 function flyTo(id) { const p = S.byId.get(id).properties; gl.jumpTo({ center: [p.cx, p.cy], zoom: Math.max(gl.getZoom(), 17) }); }
