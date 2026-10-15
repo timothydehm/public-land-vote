@@ -132,6 +132,9 @@ table.t td.code{font-variant-numeric:tabular-nums;letter-spacing:.05em;font-weig
 .vbar.lit .sq{opacity:1;filter:none;cursor:pointer}
 .vbar.lit .sq:active{transform:scale(.95)}
 .vbar.lit .sq.cur{box-shadow:0 0 0 2.5px var(--paper),0 0 0 5px var(--ink);transform:translateY(-1px)}
+.vbar.lit .sq.lock{box-shadow:inset 0 0 0 3px rgba(255,255,255,.95),0 0 0 2.5px var(--paper),0 0 0 5px var(--c)}
+.vbar.lit .sq.lock::after{content:"";position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:#fff}
+.sq{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 .sq .n{display:inline-block;text-shadow:0 1px 1px rgba(0,0,0,.18)}
 .sq .n.down{animation:tickDown .28s ease-out}
 .sq .n.up{animation:tickUp .28s ease-out}
@@ -158,8 +161,13 @@ table.t td.code{font-variant-numeric:tabular-nums;letter-spacing:.05em;font-weig
 .ct b{display:block;font-size:16.5px;line-height:1.25;letter-spacing:-.005em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cr{display:flex;align-items:center;gap:8px;margin-top:3px;font-size:13.5px;min-height:20px}
 .cr .sp{flex:1}
-.you{display:inline-flex;align-items:center;gap:6px;font-weight:650}
-.you .sw{width:12px;height:12px}
+.cr{flex-wrap:nowrap;min-width:0}
+.who{flex:0 1 auto;min-width:0;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--c);color:#fff;
+  font-size:12.5px;font-weight:650;line-height:1;padding:5px 8px;border-radius:999px;text-shadow:0 1px 1px rgba(0,0,0,.15)}
+.who.ld{flex-shrink:2}
+.lnote{font-size:13.5px;margin:0 0 8px;padding-left:9px;border-left:3px solid var(--line)}
+.note-in{width:100%;min-height:38px;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;margin:0 0 8px;font-size:14px;background:var(--paper)}
+.note-in:focus{outline:none;border-color:var(--ink)}
 .tip{color:var(--muted)}
 .nx{flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--mist);display:grid;place-items:center;color:var(--ink)}
 .nx:hover{background:#e8e6e2}
@@ -274,6 +282,12 @@ const CONFIG = {
   refreshSeconds: 20,        // how often an open map picks up other people's votes
   saveDelay: 800,            // ms after the last tap on a lot before its vote is saved
   selectZoom: 15,            // lots can be selected (and voted on) only at this zoom or closer
+  // The city's recommended use for each lot, shown on the lot's card on land bank maps, but only if the city's layer
+  // publishes one. field: its name (null: any field whose name or alias mentions "recommend"); values: the city's
+  // wording (lowercase) -> an answer. Values not listed here (or blank) show nothing.
+  cityRecommendation: { field: null, values: { "open space": "open_space", "green space": "open_space", "greenspace": "open_space",
+    "yard expansion": "yard_expansion", "side yard": "yard_expansion", "side lot": "yard_expansion",
+    "development": "development", "redevelopment": "development", "housing": "development" } },
   // The shared record. The publishable key is meant to be public; the database only allows the pv_* functions.
   supabaseUrl: "https://gftqwwxmtkjipnixuwif.supabase.co",
   supabaseKey: "sb_publishable_qsEiLPwrqJY_dD5u7X15fQ_oR-S8WI4"
@@ -355,6 +369,10 @@ const ERR = {
   bad_members: "Give 1 to 2,000 invite codes at a time.",
   bad_label: "Keep the group label to 80 characters.",
   bad_kind: "Pick a kind of map.",
+  bad_leader: "Give the leader a name of up to 60 characters.",
+  not_leader: "Only the map's leader can add a note.",
+  bad_note: "Keep the note to 80 characters.",
+  no_vote: "Vote on the lot first, then add the note.",
   too_many_attempts: "Too many tries from this network. Wait a few minutes and try again.",
   network: "Couldn't reach the record. Check the connection and try again."
 };
@@ -383,7 +401,7 @@ const LocalStore = (() => {
     const kind = m.kind || "question", codes = codesOf(m.id).map(([, c]) => c).sort((a, b) => a.member - b.member), votes = votesOf(m.id), groups = [];
     for (const c of codes) { let g = groups.find(x => x.label === (c.label || null)); if (!g) groups.push(g = { label: c.label || null, issued: 0, used: 0 }); g.issued++; if (c.used_at) g.used++; }
     return { id: m.id, kind, question: m.question, steward: m.steward, budget: kind === "question" ? m.budget : null, budgets: kind === "land_bank" ? m.budgets : null,
-      onsite: m.onsite, created_at: m.created_at, issued: codes.length, used: codes.filter(c => c.used_at).length, votes: votes.length,
+      onsite: m.onsite, created_at: m.created_at, leader: m.leader || null, leader_member: m.leader_member || null, issued: codes.length, used: codes.filter(c => c.used_at).length, votes: votes.length,
       lots: new Set(votes.map(v => v.parcel)).size, by: kind === "land_bank" ? byOf(votes) : null, groups };
   };
   const cleanLabel = l => { const t = String(l ?? "").trim(); if (t.length > 80) throw new Error("bad_label"); return t || null; };
@@ -392,7 +410,7 @@ const LocalStore = (() => {
   return {
     async maps() { return Object.values(db.maps).map(pub).sort((a, b) => b.created_at.localeCompare(a.created_at)); },
     async map(id) { return pub(mapOr404(id)); },
-    async create({ kind = "question", question, steward, budget, budgets, members, onsite, label }) {
+    async create({ kind = "question", question, steward, budget, budgets, members, onsite, label, leader }) {
       if (!["question", "land_bank"].includes(kind)) throw new Error("bad_kind");
       let q = String(question || "").trim(); if (kind === "land_bank" && !q) q = LAND_BANK_QUESTION;
       if (!q || q.length > 200) throw new Error("bad_question");
@@ -403,17 +421,35 @@ const LocalStore = (() => {
         if (!sum(Object.values(b))) throw new Error("bad_budget");
       }
       if (!(members >= 1 && members <= 2000)) throw new Error("bad_members");
-      const lab = cleanLabel(label);
+      const lab = cleanLabel(label), ld = String(leader ?? "").trim() || (steward || "").slice(0, 60) || null;
+      if (ld && ld.length > 60) throw new Error("bad_leader");
       let id; do id = randStr(6).toLowerCase(); while (db.maps[id]);
       const key = threeWords();
       const m = db.maps[id] = { id, kind, question: q, steward: steward || null, budget: kind === "question" ? budget : null, budgets: b, onsite: !!onsite, created_at: new Date().toISOString(), key: normKey(key), members: 0 };
+      m.leader = ld; const leaderCode = newCodes(m, 1, "Leader")[0]; m.leader_member = 1;
       const codes = newCodes(m, members, lab); save();
-      return { map: pub(m), key, codes };
+      return { map: pub(m), key, codes, leaderCode };
     },
     async codes(id, key) {
       const m = mapOr404(id); if (normKey(key) !== m.key) throw new Error("bad_key");
-      return codesOf(id).map(([code, c]) => ({ code, member: c.member, label: c.label || null, used_at: c.used_at })).sort((a, b) => a.member - b.member);
+      return codesOf(id).map(([code, c]) => ({ code, member: c.member, label: c.label || null, used_at: c.used_at, leader: c.member === m.leader_member })).sort((a, b) => a.member - b.member);
     },
+    async setLeader(id, key, name) {
+      const m = mapOr404(id), nm = String(name ?? "").trim();
+      if (!nm || nm.length > 60) throw new Error("bad_leader");
+      if (normKey(key) !== m.key) throw new Error("bad_key");
+      let code = m.leader_member ? codesOf(id).find(([, c]) => c.member === m.leader_member)?.[0] : null;
+      if (!code) { code = newCodes(m, 1, "Leader")[0]; m.leader_member = db.codes[code].member; }
+      m.leader = nm; save(); return { leader: nm, code };
+    },
+    async setNote(code, parcel, note) {
+      const c = codeOr(code, "not_member"), m = mapOr404(c.map), nt = String(note ?? "").trim();
+      if (m.leader_member !== c.member) throw new Error("not_leader");
+      if (nt.length > 80) throw new Error("bad_note");
+      const v = db.votes[`${m.id}|${parcel}|${c.member}`]; if (!v) throw new Error("no_vote");
+      v.note = nt || null; save();
+    },
+    async leader(id) { const m = mapOr404(id); return m.leader_member ? votesOf(id).filter(v => v.member === m.leader_member).map(v => [v.parcel, v.choice || "yes", v.note || null]) : []; },
     async findByKey(key) { return Object.values(db.maps).filter(m => m.key === normKey(key)).map(m => m.id); },
     async addCodes(id, key, n, label) { const m = mapOr404(id); const lab = cleanLabel(label); if (normKey(key) !== m.key) throw new Error("bad_key"); const c = newCodes(m, n, lab); save(); return c; },
     async join(code) { const c = codeOr(code, "code_not_found"); return { map: c.map, member: c.member, label: c.label || null }; },
@@ -429,7 +465,7 @@ const LocalStore = (() => {
       if (used >= lim) throw new Error("budget_used");
       if (m.onsite && !onsite) throw new Error("off_site");
       const at = new Date().toISOString();
-      db.votes[k] = { at, onsite: m.onsite ? true : null, choice };
+      db.votes[k] = { at, onsite: m.onsite ? true : null, choice, note: cur?.note || null };
       c.used_at ||= at;
       db.history.push({ map: m.id, parcel, member: c.member, action: cur ? "change" : "vote", choice, at, onsite: m.onsite ? true : null });
       save();
@@ -454,7 +490,7 @@ const LocalStore = (() => {
     },
     async record(id) {   // every current vote, for download
       const ids = id ? [id] : Object.keys(db.maps);
-      return ids.flatMap(mid => { const m = mapOr404(mid); return votesOf(mid).map(v => ({ map: mid, kind: m.kind, question: m.question, parcel: v.parcel, member: v.member, choice: v.choice, label: labelOf(mid, v.member), at: v.at, onsite: v.onsite })); })
+      return ids.flatMap(mid => { const m = mapOr404(mid); return votesOf(mid).map(v => ({ map: mid, kind: m.kind, question: m.question, parcel: v.parcel, member: v.member, choice: v.choice, label: labelOf(mid, v.member), at: v.at, onsite: v.onsite, leader: v.member === m.leader_member, note: v.note || null })); })
         .sort((a, b) => a.map.localeCompare(b.map) || a.at.localeCompare(b.at));
     },
     // prototype only
@@ -476,8 +512,14 @@ async function rpc(fn, args) {
 const RemoteStore = {
   maps: () => rpc("pv_list_maps"),
   map: id => rpc("pv_get_map", { p_id: id }),
-  create: ({ kind, question, steward, budget, budgets, members, onsite, label }) => rpc("pv_create_map", { p_question: question, p_steward: steward, p_kind: kind,
-    p_budget: kind === "question" ? budget : null, p_budgets: kind === "land_bank" ? budgets : null, p_members: members, p_onsite: onsite, p_label: label || null }),
+  async create({ kind, question, steward, budget, budgets, members, onsite, label, leader }) {
+    const r = await rpc("pv_create_map", { p_question: question, p_steward: steward, p_kind: kind, p_budget: kind === "question" ? budget : null,
+      p_budgets: kind === "land_bank" ? budgets : null, p_members: members, p_onsite: onsite, p_label: label || null, p_leader: leader || null });
+    return { ...r, leaderCode: r.leader_code };
+  },
+  setLeader: (id, key, name) => rpc("pv_set_leader", { p_map: id, p_key: key, p_name: name }),
+  setNote: (code, parcel, note) => rpc("pv_set_note", { p_code: code, p_parcel: parcel, p_note: note }),
+  async leader(id) { return (await rpc("pv_leader", { p_map: id })).map(([p, c, n]) => [p, c || "yes", n || null]); },
   codes: (id, key) => rpc("pv_codes", { p_map: id, p_key: key }),
   addCodes: (id, key, n, label) => rpc("pv_add_codes", { p_map: id, p_key: key, p_n: n, p_label: label || null }),
   findByKey: key => rpc("pv_find_by_key", { p_key: key }),
@@ -583,6 +625,7 @@ const S = {
   map: null, A: [YES], AK: {}, zero: [0], budgets: {}, totals: [0],
   code: null, member: null, group: null, tally: new Map(), mine: new Map(), max: 0,
   view: "mine", mode: "map", sel: null, others: [], more: false, menu: false, skipped: new Set(), me: null,
+  leader: new Map(), lock: null, recField: undefined,
   listQuery: "", listSort: "votes"
 };
 let parcelsReady = null, gl = null;
@@ -669,8 +712,8 @@ async function downloadVotes(id) {
   try {
     const rows = await Store.record(id);
     downloadFile(`public-land-votes${id ? "-" + id : ""}-${stamp()}.csv`,
-      csv([["map", "question", "parcel", "label", "answer", "member", "group", "voted_at", "on_site"],
-        ...rows.map(r => [r.map, r.question, disp(r.parcel), lotLabel(r.parcel), r.choice ? CH[r.choice]?.label || r.choice : "yes", r.member, r.label || "", r.at, r.onsite == null ? "" : r.onsite ? "yes" : "no"])]), "text/csv");
+      csv([["map", "question", "parcel", "label", "answer", "member", "group", "voted_at", "on_site", "leader", "note"],
+        ...rows.map(r => [r.map, r.question, disp(r.parcel), lotLabel(r.parcel), r.choice ? CH[r.choice]?.label || r.choice : "yes", r.member, r.label || "", r.at, r.onsite == null ? "" : r.onsite ? "yes" : "no", r.leader ? "yes" : "", r.note || ""])]), "text/csv");
   } catch (e) { toast(errText(e)); }
 }
 // Land bank maps: one row per lot with votes for each answer.
@@ -697,6 +740,8 @@ function showNew() {
         <textarea id="n-q" required maxlength="200">${esc(LAND_BANK_QUESTION)}</textarea></div>
       <div class="field"><label for="n-s">Coalition or steward</label><input class="text" id="n-s" maxlength="80" placeholder="Hough Block Club Network">
         <div class="hint">Shown with the map as the group responsible for it.</div></div>
+      <div class="field"><label for="n-ld">Leader</label><input class="text" id="n-ld" maxlength="60" placeholder="Tim (WRLC)">
+        <div class="hint">The person whose votes show on each lot as the map's recommendation. They get their own code and count as one voter. Blank: the coalition's name.</div></div>
       <div class="field" data-lb><span class="lbl">Votes per member</span>
         <div class="grid3">${CHOICES.map(c => `<div><label for="n-${c.key}" style="margin-bottom:5px"><i class="sw" style="background:${c.ramp[3]}"></i>${esc(c.label)}</label><input class="text" id="n-${c.key}" type="number" min="0" max="100" value="5" required></div>`).join("")}</div>
         <div class="hint">0 leaves that answer off the map. Fewer votes make members choose.</div></div>
@@ -723,7 +768,7 @@ function showNew() {
   $("[data-new]").onsubmit = async e => {
     e.preventDefault();
     const btn = $("[data-new] .btn-dark"), k = kind(), int = (v, lo, hi, d) => Math.max(lo, Math.min(hi, Math.round(Number(v)) || d));
-    const spec = { kind: k, question: q.value.trim(), steward: $("#n-s").value.trim(), members: int($("#n-m").value, 1, 2000, 1), onsite: $("#n-o").checked, label: $("#n-l").value.trim() };
+    const spec = { kind: k, question: q.value.trim(), steward: $("#n-s").value.trim(), leader: $("#n-ld").value.trim(), members: int($("#n-m").value, 1, 2000, 1), onsite: $("#n-o").checked, label: $("#n-l").value.trim() };
     if (k === "land_bank") spec.budgets = Object.fromEntries(CHOICES.map(c => [c.key, int($(`#n-${c.key}`).value, 0, 100, 0)]));
     else spec.budget = int($("#n-b").value, 1, 100, 5);
     btn.disabled = true; btn.textContent = "Creating…";
@@ -749,7 +794,8 @@ async function showCodes(id) {
   let codes; try { codes = await Store.codes(id, key); } catch (e) { delete stewardKeys[id]; toast(errText(e)); return showCodes(id); }
   const fresh = S.freshKey; S.freshKey = null;
   const here = location.href.split("#")[0], joinUrl = c => `${here}#/join/${c}`;
-  const groups = []; for (const c of codes) { let g = groups.find(x => x.label === (c.label || null)); if (!g) groups.push(g = { label: c.label || null, codes: [] }); g.codes.push(c); }
+  const lead = codes.find(c => c.leader), members = codes.filter(c => !c.leader);
+  const groups = []; for (const c of members) { let g = groups.find(x => x.label === (c.label || null)); if (!g) groups.push(g = { label: c.label || null, codes: [] }); g.codes.push(c); }
   const gname = g => g.label || "No group";
   setPage(`<main class="page">
     <div class="no-print">
@@ -757,8 +803,16 @@ async function showCodes(id) {
       <h1>${fresh ? "Your map is ready" : "Invite codes"}</h1>
       <p class="lead">${esc(m.question)}</p>
       ${fresh ? `<div class="panel" style="margin-bottom:12px"><div style="font-weight:650">Your steward key</div><div class="key-box"><b>${esc(fresh)}</b></div><p class="muted" style="font-size:14px;margin:0">Keep it. It's the only way back to these codes, and nobody can recover it.</p></div>` : ""}
+      <div class="panel" style="margin-bottom:12px" data-leader>
+        ${lead ? `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div style="font-weight:650">Leader: ${esc(m.leader || "")}</div>
+            <div class="muted" style="font-size:14px">Their votes show on each lot as the map's recommendation, and open the map on the area they voted in. They count as one voter.</div></div>
+            <a class="btn btn-sm btn-dark" href="#/join/${lead.code}">Vote as the leader</a></div>
+          <div class="key-box"><b>${showCode(lead.code)}</b></div>` : `<div style="font-weight:650">Leader</div>
+          <div class="muted" style="font-size:14px">Name a leader to get a leader code. Their votes show on each lot as the map's recommendation, and count as one voter.</div>`}
+        <form class="row" data-ld style="margin-top:8px;flex-wrap:nowrap"><input class="text" id="ld-n" maxlength="60" value="${esc(m.leader || "")}" placeholder="Tim (WRLC)" aria-label="Leader's name" style="min-height:40px;flex:1;min-width:0"><button class="btn btn-sm">${lead ? "Rename" : "Make a leader code"}</button></form>
+      </div>
       <div class="panel">
-        <div class="row" style="justify-content:space-between"><div><b>${fmt(codes.length)}</b> codes issued, <b>${fmt(codes.filter(c => c.used_at).length)}</b> used</div>
+        <div class="row" style="justify-content:space-between"><div><b>${fmt(members.length)}</b> member codes issued, <b>${fmt(members.filter(c => c.used_at).length)}</b> used</div>
           <div class="row"><button class="btn btn-sm btn-dark" data-print="all">Print invite cards</button><button class="btn btn-sm" data-csv>Download codes</button></div></div>
         <form data-add style="margin-top:14px"><div style="font-weight:600;font-size:14.5px">Add codes</div>
           <div class="row" style="margin-top:6px;flex-wrap:nowrap"><input class="text" id="add-n" type="number" min="1" max="1000" value="10" aria-label="How many" style="width:84px;min-height:40px;flex:none">
@@ -775,7 +829,7 @@ async function showCodes(id) {
     <div class="cards" data-cards hidden></div>
   </main>`);
   $$("[data-print]").forEach(b => b.onclick = async () => {
-    const which = b.dataset.print, list = (which === "all" ? codes : groups[+which].codes).filter(c => !c.used_at), c = $("[data-cards]");
+    const which = b.dataset.print, list = (which === "all" ? members : groups[+which].codes).filter(c => !c.used_at), c = $("[data-cards]");
     if (!list.length) return toast("Every code here has been used.");
     c.innerHTML = list.map(x => `<div class="invite"><div class="iq">${esc(m.question)}</div>${x.label ? `<div class="ib">${esc(x.label)}</div>` : ""}<div class="ic">${showCode(x.code)}</div>
       <div class="it">${m.steward ? esc(m.steward) + " · " : ""}${esc(budgetText(m))}${m.onsite ? ", cast at the lot" : ""}. Scan to vote, or open the address below and enter this code.<br>${esc(here)}</div><div class="qr" data-qr="${esc(joinUrl(x.code))}"></div></div>`).join("");
@@ -783,7 +837,8 @@ async function showCodes(id) {
     if (window.qrcode) $$("[data-qr]", c).forEach(el => { const q = qrcode(0, "M"); q.addData(el.dataset.qr); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); });
     c.hidden = false; window.print(); c.hidden = true;
   });
-  $("[data-csv]").onclick = () => downloadFile(`invite-codes-${id}.csv`, csv([["member", "code", "group", "used_at"], ...codes.map(c => [c.member, showCode(c.code), c.label || "", c.used_at || ""])]), "text/csv");
+  $("[data-csv]").onclick = () => downloadFile(`invite-codes-${id}.csv`, csv([["member", "code", "group", "used_at", "leader"], ...codes.map(c => [c.member, showCode(c.code), c.label || "", c.used_at || "", c.leader ? "yes" : ""])]), "text/csv");
+  $("[data-ld]").onsubmit = async e => { e.preventDefault(); try { await Store.setLeader(id, key, $("#ld-n").value); showCodes(id); } catch (err) { toast(errText(err)); } };
   $("[data-add]").onsubmit = async e => {
     e.preventDefault(); const n = Math.max(1, Math.min(1000, Math.round(+$("#add-n").value) || 1));
     try { await Store.addCodes(id, key, n, $("#add-l").value.trim()); showCodes(id); } catch (err) { toast(errText(err)); }
@@ -801,6 +856,7 @@ async function showAbout(id) {
     <div class="panel">
       <table class="t" style="margin:0"><tbody>
         ${m.steward ? `<tr><td class="muted">Set by</td><td>${esc(m.steward)}</td></tr>` : ""}
+        ${m.leader_member ? `<tr><td class="muted">Leader</td><td>${esc(m.leader || "")}</td></tr>` : ""}
         <tr><td class="muted">Votes per member</td><td>${esc(budgetText(m))}</td></tr>
         <tr><td class="muted">Where votes count</td><td>${m.onsite ? `Only at the lot (within ${CONFIG.onsiteMeters} m)` : "Anywhere"}</td></tr>
         <tr><td class="muted">Started</td><td>${fmtDate(m.created_at)}</td></tr>
@@ -814,6 +870,13 @@ async function showAbout(id) {
     </div>
     <h2>The record</h2>
     <p><button class="link" data-dl>Every vote (CSV)</button>${lb ? ` · <button class="link" data-dlt>Totals by lot (CSV)</button>` : ""}</p>
+    <h2>Faster voting</h2>
+    <table class="t" style="margin:0"><tbody>
+      <tr><td class="muted">Hold a color</td><td>Long-press it (double-click on a computer). Each lot you tap then gets that color; tapping a lot that already has it takes the vote back. Tap the color again to let go.</td></tr>
+      <tr><td class="muted">1 · 2 · 3</td><td>Vote the selected lot with the first, second, or third color</td></tr>
+      <tr><td class="muted">N</td><td>Next lot nearby you haven't voted on</td></tr>
+      <tr><td class="muted">Esc</td><td>Let go of the lot and of a held color</td></tr>
+    </tbody></table>
     <div class="tools"><a class="link" href="#/m/${id}/codes">Invite codes</a> <span>(for the map's steward)</span></div>
   </main>`);
   $("[data-dl]").onclick = () => downloadVotes(id);
@@ -824,12 +887,17 @@ async function showAbout(id) {
    The map. On screen: the map, one bar of choices, and (with a lot
    selected) the lot's card. Everything that isn't voting is under ⋯.
    Tap a lot to select it, then tap a color to vote. Tap your color again
-   to take the vote back; tap another color to move it.
+   to take the vote back; tap another color to move it. Long-press (or
+   double-click) a color to hold it: then each lot tapped gets that color.
+   Keys: 1/2/3 vote, N next lot nearby, Esc let go.
+   A map's leader is one member; their votes are shown as its
+   recommendation (the Leader view, and a chip on each lot's card).
    ===================================================================== */
 const ICON = {
   mine: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6"/></svg>`,
   everyone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="16.6" cy="7.4" r="2.6"/><path d="M16.4 12.5c2.5 0 4.4 1.6 4.9 4.4"/></svg>`,
   more: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`,
+  leader: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V3.5"/><path d="M6 4h11l-2.6 4L17 12H6"/></svg>`,
   next: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>`,
   locate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.2"/></svg>`
 };
@@ -850,8 +918,8 @@ async function showMap(id, lot) {
   let m; try { m = await Store.map(id); } catch (e) { return errPage(e); }
   const switching = !S.map || S.map.id !== id;
   if (S.sel && gl) setSel(S.sel, false);
-  S.map = m; setAnswers(m); S.code = myCodes.get(id); S.member = S.group = null; S.sel = null; S.others = []; S.more = false; S.menu = false;
-  if (switching) { S.view = "mine"; S.mode = "map"; S.listQuery = ""; S.listSort = "votes"; S.tally = new Map(); S.mine = new Map(); S.skipped = new Set(); }
+  S.map = m; setAnswers(m); S.code = myCodes.get(id); S.member = S.group = null; S.sel = null; S.others = []; S.more = false; S.menu = false; S.lock = null;
+  if (switching) { S.view = "mine"; S.mode = "map"; S.listQuery = ""; S.listSort = "votes"; S.tally = new Map(); S.mine = new Map(); S.leader = new Map(); S.skipped = new Set(); }
   if (S.code) {
     try { const r = await Store.join(S.code); if (r.map === id) { S.member = r.member; S.group = r.label; } else S.code = null; }
     catch (e) { if (String(e.message) === "code_not_found") myCodes.del(id); else toast(errText(e)); S.code = null; }
@@ -897,7 +965,7 @@ function wireMap() {
   $("[data-bar]").onclick = e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.sq) tapSquare(b.dataset.sq, b);
-    else if (b.hasAttribute("data-view")) { S.view = S.view === "mine" ? "everyone" : "mine"; applyView(); updateBar(); }
+    else if (b.hasAttribute("data-view")) cycleView();
     else if (b.hasAttribute("data-more")) { S.menu = !S.menu; renderMenu(); }
   };
   $("[data-join]").onsubmit = async e => {
@@ -912,6 +980,20 @@ function wireMap() {
       $("#m-code").blur();
     } catch (err) { shake(form); toast(errText(err)); }
   };
+  // Hold a color: long-press on a phone, double-click on a computer.
+  const bar = $("[data-bar]"); let press = null, mouse = true;
+  bar.addEventListener("pointerdown", e => {
+    mouse = e.pointerType === "mouse";
+    const b = e.target.closest("[data-sq]"); if (!b || mouse) return;
+    press = { b, t: setTimeout(() => { press.done = true; holdChoice(b.dataset.sq, b); }, 450), x: e.clientX, y: e.clientY };
+  });
+  const cancel = () => { if (press && !press.done) clearTimeout(press.t); };
+  bar.addEventListener("pointermove", e => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancel(); });
+  bar.addEventListener("pointerup", cancel); bar.addEventListener("pointercancel", cancel);
+  bar.addEventListener("click", e => { if (press?.done) { e.stopImmediatePropagation(); e.preventDefault(); } press = null; }, true);   // the tap that ends a long-press isn't a vote
+  bar.addEventListener("click", e => { if (mouse && e.detail > 1 && e.target.closest("[data-sq]")) e.stopImmediatePropagation(); }, true);  // the second click of a double-click isn't a vote
+  bar.addEventListener("dblclick", e => { const b = e.target.closest("[data-sq]"); if (b && mouse) holdChoice(b.dataset.sq, b); });
+  bar.addEventListener("contextmenu", e => { if (e.target.closest("[data-sq]")) e.preventDefault(); });
   // Swipe the card down to let go of the lot; swipe left for the next lot nearby.
   let sw = null;
   card.addEventListener("touchstart", e => { const t = e.touches[0]; sw = { x: t.clientX, y: t.clientY, top: card.scrollTop }; }, { passive: true });
@@ -931,8 +1013,10 @@ function wireMap() {
 document.addEventListener("pointerdown", e => { if (S.menu && !e.target.closest("[data-menu],[data-more]")) { S.menu = false; renderMenu(); } });
 document.addEventListener("keydown", e => {
   if (!document.body.classList.contains("on-map") || e.target.closest("input,select,textarea")) return;
-  if (e.key === "Escape") { if (S.menu) { S.menu = false; renderMenu(); } else closeLot(); }
-  else if (e.key === "ArrowRight" && S.sel) nextNearby();
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "Escape") { if (S.menu) { S.menu = false; renderMenu(); } else { closeLot(); setLock(null); } }
+  else if ((e.key === "ArrowRight" || e.key.toLowerCase() === "n") && S.sel) nextNearby();
+  else if (/^[1-9]$/.test(e.key) && S.sel && S.A[+e.key - 1]) voteKey(S.A[+e.key - 1].key);
 });
 let resizeT = 0;
 window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.body.classList.contains("on-map") && S.sel) { renderCard(); keepInView(S.sel); } }, 150); });
@@ -951,10 +1035,11 @@ function startLive() {
 // ifIdle: drop what came back if taps were made meanwhile, so it never overwrites a vote not yet saved.
 async function refresh(ifIdle = false) {
   const id = S.map.id, code = S.code;
-  const [t, mine, m] = await Promise.all([Store.tally(id), code ? Store.mine(code) : new Map(), Store.map(id)]);
+  const [t, mine, m, lead] = await Promise.all([Store.tally(id), code ? Store.mine(code) : new Map(), Store.map(id), S.map.leader_member ? Store.leader(id) : []]);
   if (S.map?.id !== id || S.code !== code) return false;
   if (ifIdle && (pending.size || inflight)) return false;
   S.tally = t; S.mine = mine; S.map = m; S.budgets = budgetsOf(m);
+  S.leader = new Map(lead.map(([p, c, n]) => [p, { choice: c, note: n }]));
   S.totals = m.kind === "land_bank" ? CHOICES.map(c => m.by?.[c.key] || 0) : [m.votes];
   if (mine.size) markVoted();
   setMax(); return true;
@@ -969,6 +1054,8 @@ const leading = n => leadingOf(n, S.A);
 const colorOf = id => { const l = leading(counts(id)), c = level(id); return !l ? "#FFFFFF" : (l === "tie" ? TIE : S.AK[l].ramp)[c - 1]; };
 const used = k => { let n = 0; for (const c of S.mine.values()) if (c === k) n++; return n; };
 const left = k => Math.max(0, (S.budgets[k] || 0) - used(k));
+const isLeader = () => !!S.code && S.member != null && S.member === S.map?.leader_member;
+const leaderName = () => S.map?.leader || "Leader";
 
 /* --- the bar: a square per answer (votes left), whose votes, and ⋯ --- */
 function buildBar() {
@@ -980,8 +1067,9 @@ function buildBar() {
 function updateBar(first) {
   const el = $("[data-bar]"); if (!el) return;
   const id = S.sel, cur = id ? S.mine.get(id) : null;
-  el.classList.toggle("lit", !!id);
+  el.classList.toggle("lit", !!id || !!S.lock);
   for (const b of $$("[data-sq]", el)) {
+    b.classList.toggle("lock", S.lock === b.dataset.sq);
     const a = S.AK[b.dataset.sq], n = S.code ? left(a.key) : (S.budgets[a.key] || 0), nEl = $(".n", b), old = nEl.textContent === "" ? null : +nEl.textContent;
     b.classList.toggle("cur", cur === a.key);
     b.setAttribute("aria-pressed", String(cur === a.key));
@@ -993,18 +1081,47 @@ function updateBar(first) {
       if (!first && old !== null && !calm()) { nEl.classList.remove("up", "down"); void nEl.offsetWidth; nEl.classList.add(n < old ? "down" : "up"); }
     }
   }
-  const v = $("[data-view]", el), mine = S.view === "mine";
-  v.innerHTML = mine ? ICON.mine : ICON.everyone;
-  v.setAttribute("aria-label", mine ? "Your votes. Show everyone's" : "Everyone's votes. Show yours");
-  v.title = mine ? "Your votes" : "Everyone's votes";
+  const v = $("[data-view]", el), vs = views(), next = vs[(vs.indexOf(S.view) + 1) % vs.length];
+  v.innerHTML = ICON[S.view];
+  v.setAttribute("aria-label", `${viewName(S.view)}. Show ${viewName(next)}`);
+  v.title = viewName(S.view);
+}
+// Views: Mine → Leader → Everyone (Leader only on maps that have one). A short label on switching, then nothing.
+const views = () => S.map?.leader_member ? ["mine", "leader", "everyone"] : ["mine", "everyone"];
+const viewName = v => v === "mine" ? "Your votes" : v === "leader" ? leaderName() : "Everyone";
+function cycleView() {
+  const vs = views(); S.view = vs[(vs.indexOf(S.view) + 1) % vs.length];
+  applyView(); updateBar(); hintPill(viewName(S.view), 1000);
 }
 function tapSquare(key, b) {
+  if (S.lock && S.lock === key) return setLock(null);   // tapping the held color lets go of it
+  voteKey(key, b);
+}
+// Vote the selected lot with this answer: same answer takes it back, another moves it, none left shakes.
+function voteKey(key, b = $(`[data-sq="${key}"]`)) {
   const id = S.sel; if (!id) return;   // no lot selected: the squares are the key
   if (!S.code) { const f = $("[data-join]"); shake(f); $("#m-code")?.focus(); return; }
   const cur = S.mine.get(id) || null;
   if (cur === key) { setChoice(id, null); feedback(id, null); return; }   // same color: take it back
   if (left(key) <= 0) { shake(b); return; }                                // none left of that color
   setChoice(id, key); feedback(id, key); markVoted();                      // new vote, or moved from another color
+  if (S.lock && left(S.lock) <= 0) { const k = S.lock; setLock(null); shake($(`[data-sq="${k}"]`)); }   // held color used up: let go
+}
+// Hold a color (long-press / double-click): every lot tapped then gets it.
+function holdChoice(key, b) {
+  if (!S.code) { shake($("[data-join]")); $("#m-code")?.focus(); return; }
+  if (S.lock === key) return setLock(null);
+  if (left(key) <= 0) return shake(b);
+  setLock(key); try { navigator.vibrate?.(15); } catch {}
+}
+function setLock(key) { S.lock = key || null; updateBar(); }
+// A lot tapped while a color is held gets that color; if it already has it, the vote comes back.
+function tapWithLock(id) {
+  const k = S.lock, cur = S.mine.get(id) || null;
+  if (cur === k) { setChoice(id, null); feedback(id, null); return; }
+  if (left(k) <= 0) { setLock(null); shake($(`[data-sq="${k}"]`)); return; }
+  setChoice(id, k); feedback(id, k); markVoted();
+  if (left(k) <= 0) { setLock(null); shake($(`[data-sq="${k}"]`)); }
 }
 function feedback(id, key) {
   try { navigator.vibrate?.(10); } catch {}
@@ -1045,23 +1162,56 @@ function renderCard(fresh) {
   const el = $("[data-card]"); if (!el) return;
   const id = S.sel; el.hidden = !id || S.mode === "list";
   if (el.hidden) return;
+  if (!fresh && el.dataset.lot === id && document.activeElement?.matches?.("[data-note]")) return;   // don't wipe a note being typed
+  el.dataset.lot = id;
   const p = S.byId.get(id).properties, addr = parseAddress(p.city?.[CONFIG.addressField])?.full;
   const cur = S.mine.get(id), n = counts(id), wide = isWide(), open = wide || S.more;
   const near = addr ? p.d : (/^Parcel /.test(p.a) ? "" : p.a);
   const val = v => v === null || v === undefined || String(v).trim() === "" ? null : typeof v === "number" ? fmt(v) : String(v);
+  // Who says what: City · Leader · You, each in its answer's color; nothing for a source with no answer here.
+  const city = cityPick(p), lead = S.map.leader_member ? S.leader.get(id) : null, me = isLeader();
+  const chip = (who, key, cls = "") => `<span class="who ${cls}" style="--c:${S.AK[key].ramp[3]}" title="${esc(`${who}: ${answerName(S.AK[key])}`)}">${esc(who)}</span>`;
+  const chips = [city && S.AK[city] ? chip("City", city) : "", lead && S.AK[lead.choice] ? chip(leaderName(), lead.choice, "ld") : "", cur && !me ? chip("You", cur) : ""].join("");
+  const note = lead?.note || "";
   if (fresh && !calm()) { el.classList.remove("in"); void el.offsetWidth; el.classList.add("in"); }
   el.innerHTML = `<div class="ch"><div class="ct"><b>${esc(addr || p.d)}</b>
-      <div class="cr">${cur ? `<span class="you"><i class="sw" style="background:${S.AK[cur].ramp[3]}"></i>${esc(answerName(S.AK[cur]))}</span>` : !votedOnce ? `<span class="tip">Tap a color to vote.</span>` : ""}
+      <div class="cr">${chips}${!cur && !votedOnce ? `<span class="tip">Tap a color to vote.</span>` : ""}
         <span class="sp"></span>${wide ? "" : `<button class="link quiet" data-moreinfo aria-expanded="${open}">${open ? "Less" : "More"}</button>`}</div></div>
       <button class="nx" data-next aria-label="Next lot nearby" title="Next lot nearby">${ICON.next}</button></div>
     ${open ? `<div class="cx">
       ${near ? `<div class="pin">${esc(near)}</div>` : ""}
+      ${me && cur ? `<input class="note-in" data-note maxlength="80" placeholder="Why? (optional)" aria-label="Note on this lot" value="${esc(note)}">`
+        : note ? `<div class="lnote">${esc(note)}</div>` : ""}
       <table class="tl"><tbody>${S.A.map((a, i) => `<tr class="${cur === a.key ? "me" : ""}"><td><i class="sw" style="background:${a.ramp[3]}"></i>${esc(a.key === "yes" ? "Votes" : a.label)}</td><td class="num">${fmt(n[i])}</td></tr>`).join("")}</tbody></table>
       <h3>City record</h3><dl class="city">${S.fields.map(f => { const v = val(p.city[f.name]); return `<dt>${esc(f.alias)}</dt><dd class="${v === null ? "blank" : ""}">${v === null ? "Blank" : esc(v)}</dd>`; }).join("")}</dl>
       ${S.others.length ? `<h3>On other maps</h3><div class="others">${S.others.map(o => `<a href="#/m/${o.id}?lot=${id}">${otherLine(o)} <span class="on">→</span></a>`).join("")}</div>` : ""}
     </div>` : ""}`;
   $("[data-next]", el).onclick = () => nextNearby();
   $("[data-moreinfo]", el)?.addEventListener("click", () => { S.more = !S.more; renderCard(); keepInView(id); });
+  const ni = $("[data-note]", el);
+  if (ni) {
+    ni.addEventListener("keydown", e => { if (e.key === "Enter") ni.blur(); if (e.key === "Escape") { ni.value = note; ni.blur(); } e.stopPropagation(); });
+    ni.addEventListener("change", () => saveNote(id, ni.value));
+  }
+}
+// The leader's note on a lot: saved after the lot's vote is.
+function saveNote(id, text) {
+  const t = String(text || "").trim().slice(0, 80), cur = S.leader.get(id); if (!cur || (cur.note || "") === t) return;
+  cur.note = t || null; const code = S.code;
+  flush(id);
+  inflight++;   // keeps the live refresh from bringing back the old note meanwhile
+  (chains.get(id) || Promise.resolve()).then(() => Store.setNote(code, id, t)).catch(e => toast(errText(e))).finally(() => { inflight--; settle(); });
+}
+// The city's recommended use for a lot, as an answer key: only on land bank maps, only if the city publishes one.
+function cityPick(p) {
+  if (S.A.length < 2) return null;
+  if (S.recField === undefined) {
+    const f = CONFIG.cityRecommendation.field;
+    S.recField = f ? (S.fields.some(x => x.name === f) ? f : null) : (S.fields.find(x => /recommend/i.test(`${x.name} ${x.alias}`))?.name || null);
+  }
+  if (!S.recField) return null;
+  const v = String(p.city?.[S.recField] ?? "").trim().toLowerCase(); if (!v) return null;
+  return CONFIG.cityRecommendation.values[v] || CHOICES.find(c => c.key === v || c.label.toLowerCase() === v)?.key || null;
 }
 // "Ward 7 office · Development 3 · Open space 1" for a land bank map; the question and its votes for a question map.
 function otherLine(o) {
@@ -1089,6 +1239,7 @@ function setChoice(id, to) {
   if (to) { n[S.AK[to].i]++; S.totals[S.AK[to].i]++; }
   sum(n) ? S.tally.set(id, n) : S.tally.delete(id);
   to ? S.mine.set(id, to) : S.mine.delete(id);
+  if (isLeader()) to ? S.leader.set(id, { choice: to, note: S.leader.get(id)?.note || null }) : S.leader.delete(id);
   setMax();
   const p = pending.get(id) || { from: cur, code: S.code, map: S.map.id, onsite: S.map.onsite };
   clearTimeout(p.timer); p.to = to; p.timer = setTimeout(() => flush(id), CONFIG.saveDelay);
@@ -1170,6 +1321,7 @@ function renderList() {
   const q = S.listQuery.trim().toLowerCase(), qn = normId(q);
   let ids = S.ids;
   if (S.view === "mine") ids = ids.filter(id => S.mine.has(id));
+  if (S.view === "leader") ids = ids.filter(id => S.leader.has(id));
   if (q) ids = ids.filter(id => { const p = S.byId.get(id).properties; return p.a.toLowerCase().includes(q) || (qn && p.id.includes(qn)); });
   const az = (a, b) => S.byId.get(a).properties.a.localeCompare(S.byId.get(b).properties.a, undefined, { numeric: true });
   const lb = S.A.length > 1, opts = [["votes", "Most votes"], ...(lb ? S.A.map(a => [a.key, `Most ${lower(a.key)}`]) : []), ["az", "A to Z"]];
@@ -1183,7 +1335,7 @@ function renderList() {
     ${shown.map(id => { const p = S.byId.get(id).properties, n = counts(id), t = sum(n), col = colorOf(id), dark = level(id) >= 4, mine = S.mine.get(id);
       return `<button class="lot" data-lot="${id}"><div><div class="ll">${esc(p.a)}</div><div class="lp">${esc(p.d)}${mine ? ` · <b style="color:var(--ink)">${lb ? `You: ${esc(lower(mine))}` : "Your vote"}</b>` : ""}</div></div>
         <span class="chip" style="background:${col};color:${dark ? "#fff" : "var(--ink)"}" title="${esc(S.A.map((a, i) => `${a.label} ${n[i]}`).join(", "))}">${fmt(t)}</span></button>`; }).join("")}
-    <div class="more">${sorted.length ? `${fmt(shown.length)} of ${plural(sorted.length, "lot", "lots")}${sorted.length > shown.length ? ". Search to narrow it down." : ""}` : S.view === "mine" ? "You haven't voted on this map yet." : "No lots match."}</div></div>`;
+    <div class="more">${sorted.length ? `${fmt(shown.length)} of ${plural(sorted.length, "lot", "lots")}${sorted.length > shown.length ? ". Search to narrow it down." : ""}` : S.view === "mine" ? "You haven't voted on this map yet." : S.view === "leader" ? "No leader votes yet." : "No lots match."}</div></div>`;
   const qi = $("#l-q", el); qi.oninput = () => { S.listQuery = qi.value; renderList(); };
   if (keep) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
   $("#l-s", el).onchange = e => { S.listSort = e.target.value; renderList(); };
@@ -1192,24 +1344,27 @@ function renderList() {
 
 /* --- drawing the map --- */
 // Feature state per lot: k = leading answer (1-3, 9 tie, 0 none), c = agreement (0-5), m = your answer (1-3, 0 none), s = selected.
-const painted = new Map();
+const painted = new Map();   // l = the leader's answer (1-3, 0 none)
 function fsSet(id, st) { gl.setFeatureState({ source: "parcels", id }, st); gl.setFeatureState({ source: "pts", id }, st); }
 function paint(id) {
-  const l = leading(counts(id)), k = !l ? 0 : l === "tie" ? 9 : S.AK[l].i + 1, c = level(id), mine = S.mine.get(id), m = mine && S.AK[mine] ? S.AK[mine].i + 1 : 0, key = k * 100 + c * 10 + m;
-  if (painted.get(id) !== key) { painted.set(id, key); fsSet(id, { k, c, m }); }
+  const l = leading(counts(id)), k = !l ? 0 : l === "tie" ? 9 : S.AK[l].i + 1, c = level(id), mine = S.mine.get(id), m = mine && S.AK[mine] ? S.AK[mine].i + 1 : 0;
+  const ld = S.leader.get(id)?.choice, ll = ld && S.AK[ld] ? S.AK[ld].i + 1 : 0, key = ll * 1000 + k * 100 + c * 10 + m;
+  if (painted.get(id) !== key) { painted.set(id, key); fsSet(id, { k, c, m, l: ll }); }
 }
 function paintAll() { if (gl) for (const id of S.ids) paint(id); }
 function setSel(id, on) { if (gl) fsSet(id, { s: on }); }
-// Mine: your lots solid in your color, the rest bare outlines. Everyone: the leading answer's color, stronger where more members agree.
+// Mine: your lots solid in your color, the rest bare outlines. Leader: the same for the leader's lots, with a dashed edge.
+// Everyone: the leading answer's color, stronger where more members agree.
 const AGREE = [0.4, 0.55, 0.7, 0.82, 0.92];
 function applyView() {
   if (!gl) return renderList();
   const k = ["coalesce", ["feature-state", "k"], 0], c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0];
-  const mineView = S.view === "mine";
-  const fill = mineView ? ["match", m, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), "#FFFFFF"]
+  const l = ["coalesce", ["feature-state", "l"], 0], own = S.view === "mine" ? m : S.view === "leader" ? l : null, mineView = !!own;
+  const fill = mineView ? ["match", own, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), "#FFFFFF"]
     : ["match", k, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), 9, TIE[3], "#FFFFFF"];
-  const op = mineView ? ["match", m, 0, 0, 0.92] : ["match", c, 0, CONFIG.emptyOpacity, ...AGREE.slice(0, 4).flatMap((o, i) => [i + 1, o]), AGREE[4]];
-  const has = mineView ? [">", m, 0] : [">", c, 0];
+  const op = mineView ? ["match", own, 0, 0, 0.92] : ["match", c, 0, CONFIG.emptyOpacity, ...AGREE.slice(0, 4).flatMap((o, i) => [i + 1, o]), AGREE[4]];
+  const has = mineView ? [">", own, 0] : [">", c, 0];
+  gl.setPaintProperty("lead-line", "line-opacity", S.view === "leader" ? ["case", [">", l, 0], 0.95, 0] : 0);
   gl.setPaintProperty("lots-fill", "fill-color", fill); gl.setPaintProperty("lots-fill", "fill-opacity", op);
   gl.setPaintProperty("lots-case", "line-opacity", mineView ? 0.28 : 0.45);
   gl.setPaintProperty("lots-line", "line-opacity", mineView ? 0.75 : 0.9);
@@ -1229,7 +1384,7 @@ function flashLot(id, key) {
   cancelAnimationFrame(flashRaf);
   const t0 = performance.now(), D = 560;
   const step = now => {
-    const t = Math.min(1, (now - t0) / D), e = 1 - (1 - t) ** 3;
+    const t = Math.max(0, Math.min(1, (now - t0) / D)), e = 1 - (1 - t) ** 3;
     gl.setPaintProperty("flash-fill", "fill-opacity", (key ? 0.95 : 0.85) * (1 - e));
     gl.setPaintProperty("flash-ring", "line-width", 2 + 16 * e);
     gl.setPaintProperty("flash-ring", "line-opacity", 0.9 * (1 - t));
@@ -1265,6 +1420,8 @@ async function ensureMap() {
         "circle-color": "#FFFFFF", "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["case", [">", c, 0], 3, 1.6], 14, ["case", [">", c, 0], 4.6, 2.8]],
         "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0], "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0],
         "circle-stroke-color": "#6F6C74", "circle-stroke-width": 0.6 } },
+    { id: "lead-line", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#1D1A26", "line-opacity": 0, "line-dasharray": [1.6, 1.2],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1, 16, 1.8, 18, 2.4] } },
     { id: "flash-fill", type: "fill", source: "flash", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0, "fill-opacity-transition": none, "fill-color-transition": none } },
     { id: "flash-ring", type: "line", source: "flash", paint: { "line-color": "#FFFFFF", "line-opacity": 0, "line-width": 2, "line-blur": 2, "line-opacity-transition": none, "line-width-transition": none, "line-color-transition": none } },
     { id: "sel-halo", type: "line", source: "parcels", paint: { "line-color": "#FFFFFF", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 16, 6.5, 18, 8] } },
@@ -1295,7 +1452,9 @@ async function ensureMap() {
       closeLot(); gl.easeTo({ center: e.lngLat, zoom: CONFIG.selectZoom + 1.5, duration: calm() ? 0 : 500 });
       return hintPill("Zoom in to vote");
     }
-    select(hit.id ?? normId(hit.properties.id));
+    const id = hit.id ?? normId(hit.properties.id);
+    select(id);
+    if (S.lock && S.code) tapWithLock(id);
   });
   gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length && gl.getZoom() >= CONFIG.selectZoom ? "pointer" : ""; });
   // Feature colors need the lot layers in place; 'load' also waits for every background tile, so don't wait past the style.
@@ -1339,6 +1498,11 @@ async function addSamples() {
   const pick = (pool, hot) => (rnd() < 0.5 ? hot[Math.floor(rnd() * hot.length)] : pool[Math.floor(rnd() * pool.length)]).id;
   const landBank = async (spec, groups, pool) => {
     const r = await Store.create({ kind: "land_bank", question: LAND_BANK_QUESTION, members: groups[0][1], label: groups[0][0], onsite: false, ...spec });
+    const hot0 = pool.slice(0, 30), notes = ["Next to the community garden", "Neighbors already mow it", "Faces the new homes on this block"];
+    let n = 0;   // the leader's first pass: the hot lots, a few with notes
+    for (const c of CHOICES) for (let i = 0; i < spec.budgets[c.key]; i++) {
+      const id = hot0[n++ % hot0.length].id; try { await Store.vote(r.leaderCode, id, c.key); if (n <= notes.length) await Store.setNote(r.leaderCode, id, notes[n - 1]); } catch {}
+    }
     let codes = r.codes.slice(0, groups[0][2]);
     for (const [label, n, voters] of groups.slice(1)) codes = codes.concat((await Store.addCodes(r.map.id, r.key, n, label)).slice(0, voters));
     const hot = pool.slice(0, 30);
@@ -1348,9 +1512,9 @@ async function addSamples() {
       for (const id of picks) { try { await Store.vote(code, id, c.key); } catch {} }
     }
   };
-  await landBank({ steward: "Hough Block Club Network (sample)", budgets: { open_space: 5, development: 3, yard_expansion: 2 } },
+  await landBank({ steward: "Hough Block Club Network (sample)", leader: "Tim (WRLC)", budgets: { open_space: 5, development: 3, yard_expansion: 2 } },
     [["Hough training, Oct 12", 30, 20], ["Glenville walk, Oct 19", 15, 8]], [...hough, ...glenville.slice(0, 40)]);
-  await landBank({ steward: "Ward 7 office (sample)", budgets: { open_space: 3, development: 5, yard_expansion: 2 } },
+  await landBank({ steward: "Ward 7 office (sample)", leader: "Ward 7 staff", budgets: { open_space: 3, development: 5, yard_expansion: 2 } },
     [["Ward 7 staff", 12, 9]], [...hough.slice(0, 80)]);
   const q = await Store.create({ kind: "question", question: "Where should our block clubs plant trees first?", steward: "East Side Block Clubs (sample)", budget: 3, members: 25, onsite: true, label: "Tree walk, Oct 5" });
   const pool = [...hough.slice(0, 60), ...glenville], hot = pool.slice(0, 25);

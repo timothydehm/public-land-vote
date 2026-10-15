@@ -21,11 +21,16 @@
 --                answers matching the city's land bank programs: open
 --                space, development, yard expansion, each with its own
 --                number of votes per member).
+--                A map can have a leader: one member whose votes are shown
+--                as the map's recommendation, under the leader's name. They
+--                count like anyone else's.
 --   pv_codes     invite codes. One per member, in labeled groups; readable
 --                only through the steward key. Group labels are public.
+--                The leader's code is one of them (pv_maps.leader_member).
 --   pv_votes     current votes: map, parcel, member number, answer (land
 --                bank maps), time, and the on-site yes/no on on-site maps.
---                One vote per lot per member. Public.
+--                One vote per lot per member. Public. The leader's votes can
+--                carry a one-line note (why).
 --   pv_history   every vote, change, and take-back, append-only. Public.
 --   pv_sync      where the lots come from and how the last sync went.
 --   pv_attempts  rate limiting by network address.
@@ -154,6 +159,10 @@ alter table pv_history add column if not exists choice text;
 alter table pv_history drop constraint if exists pv_history_action_check;
 alter table pv_history add constraint pv_history_action_check check (action in ('vote', 'change', 'take back'));
 create index if not exists pv_votes_by_member on pv_votes (map_id, member, choice);
+-- Leaders (Oct 15, 2026): a map's leader is one member, shown by name; their votes can carry a note.
+alter table pv_maps    add column if not exists leader text check (length(leader) <= 60);
+alter table pv_maps    add column if not exists leader_member int;
+alter table pv_votes   add column if not exists note text check (length(note) <= 80);
 
 create table if not exists pv_attempts (
   ip   text not null,
@@ -235,7 +244,7 @@ language sql immutable set search_path = public as $$ select jsonb_build_object(
 create or replace function pv_map_info(p_id text) returns jsonb
 language sql stable security definer set search_path = public as $$
   select jsonb_build_object('id', m.id, 'kind', m.kind, 'question', m.question, 'steward', m.steward, 'budget', m.budget, 'budgets', m.budgets,
-           'onsite', m.onsite, 'created_at', m.created_at,
+           'onsite', m.onsite, 'created_at', m.created_at, 'leader', m.leader, 'leader_member', m.leader_member,
            'issued', (select count(*) from pv_codes c where c.map_id = m.id),
            'used',   (select count(*) from pv_codes c where c.map_id = m.id and c.used_at is not null),
            'votes',  v.n, 'lots', v.lots,
@@ -286,20 +295,24 @@ $$;
 -- Question map: p_budget votes per member. Land bank map: p_budgets, votes per member for each answer
 -- (0 leaves that answer off the map). p_label names the first group of codes.
 -- Postgres can't change a function's arguments in place, so the older versions are dropped first.
+-- Every new map gets a leader code (member 1) as well: the leader votes with it like anyone else, and those votes
+-- are shown as the map's recommendation under p_leader (the steward's name if blank).
 drop function if exists pv_create_map(text, text, int, int, boolean);
+drop function if exists pv_create_map(text, text, text, int, jsonb, int, boolean, text);
 create or replace function pv_create_map(p_question text, p_steward text, p_kind text default 'question', p_budget int default null,
-  p_budgets jsonb default null, p_members int default null, p_onsite boolean default false, p_label text default null)
+  p_budgets jsonb default null, p_members int default null, p_onsite boolean default false, p_label text default null, p_leader text default null)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
   v_id text; k text := pv_words(); codes jsonb; kind text := coalesce(nullif(p_kind, ''), 'question');
   q text := trim(coalesce(p_question, '')); s text := nullif(trim(coalesce(p_steward, '')), ''); lab record;
-  b jsonb := '{}'; a text; n numeric; total int := 0;
+  b jsonb := '{}'; a text; n numeric; total int := 0; ld text := nullif(trim(coalesce(p_leader, '')), ''); lc jsonb;
 begin
   if kind not in ('question', 'land_bank') then return pv_err('bad_kind'); end if;
   if kind = 'land_bank' and q = '' then q := 'What should each lot become?'; end if;
   if q = '' or length(q) > 200 then return pv_err('bad_question'); end if;
   if length(s) > 80 then return pv_err('bad_steward'); end if;
+  if length(ld) > 60 then return pv_err('bad_leader'); end if;
   if kind = 'question' then
     if p_budget is null or p_budget < 1 or p_budget > 100 then return pv_err('bad_budget'); end if;
   else
@@ -316,11 +329,13 @@ begin
   if pv_over('create', 20, interval '1 hour') then return pv_err('too_many_attempts'); end if;
   perform pv_note('create');
   loop v_id := lower(pv_rand(6)); exit when not exists (select 1 from pv_maps m where m.id = v_id); end loop;
-  insert into pv_maps (id, kind, question, steward, budget, budgets, onsite, key_hash)
+  insert into pv_maps (id, kind, question, steward, budget, budgets, onsite, key_hash, leader)
     values (v_id, kind, q, s, case when kind = 'question' then p_budget end, case when kind = 'land_bank' then b end,
-            coalesce(p_onsite, false), pv_hash(pv_norm_key(k)));
+            coalesce(p_onsite, false), pv_hash(pv_norm_key(k)), coalesce(ld, left(s, 60)));
+  lc := pv_issue_codes(v_id, 1, 'Leader');
+  update pv_maps set leader_member = 1 where id = v_id;
   codes := pv_issue_codes(v_id, p_members, lab.label);
-  return jsonb_build_object('map', pv_map_info(v_id), 'key', k, 'codes', codes);
+  return jsonb_build_object('map', pv_map_info(v_id), 'key', k, 'codes', codes, 'leader_code', lc -> 0);
 end $$;
 
 create or replace function pv_steward_ok(p_map text, p_key text) returns boolean
@@ -337,8 +352,9 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not exists (select 1 from pv_maps where id = p_map) then return pv_err('map_not_found'); end if;
   if not pv_steward_ok(p_map, p_key) then return pv_err('bad_key'); end if;
-  return coalesce((select jsonb_agg(jsonb_build_object('code', code, 'member', member, 'label', label, 'used_at', used_at) order by member)
-                   from pv_codes where map_id = p_map), '[]');
+  return coalesce((select jsonb_agg(jsonb_build_object('code', c.code, 'member', c.member, 'label', c.label, 'used_at', c.used_at,
+                                     'leader', c.member is not distinct from m.leader_member) order by c.member)
+                   from pv_codes c join pv_maps m on m.id = c.map_id where c.map_id = p_map), '[]');
 exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
 end $$;
 
@@ -353,6 +369,28 @@ begin
   if not pv_steward_ok(p_map, p_key) then return pv_err('bad_key'); end if;
   if (select members from pv_maps where id = p_map) + p_n > 5000 then return pv_err('bad_members'); end if;
   return pv_issue_codes(p_map, p_n, lab.label);
+exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
+end $$;
+
+-- The steward names the leader, and makes the leader code if the map doesn't have one (maps made before Oct 15).
+-- Returns {"leader": name, "code": the leader code}.
+create or replace function pv_set_leader(p_map text, p_key text, p_name text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare nm text := nullif(trim(coalesce(p_name, '')), ''); m pv_maps; lc text;
+begin
+  if not exists (select 1 from pv_maps where id = p_map) then return pv_err('map_not_found'); end if;
+  if nm is null or length(nm) > 60 then return pv_err('bad_leader'); end if;
+  if not pv_steward_ok(p_map, p_key) then return pv_err('bad_key'); end if;
+  perform pg_advisory_xact_lock(hashtext('pv-leader:' || p_map));
+  select * into m from pv_maps where id = p_map;
+  if m.leader_member is null then
+    lc := pv_issue_codes(p_map, 1, 'Leader') ->> 0;
+    update pv_maps set leader = nm, leader_member = (select member from pv_codes where code = lc) where id = p_map;
+  else
+    update pv_maps set leader = nm where id = p_map;
+    select code into lc from pv_codes where map_id = p_map and member = m.leader_member;
+  end if;
+  return jsonb_build_object('leader', nm, 'code', lc);
 exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
 end $$;
 
@@ -424,6 +462,23 @@ begin
   return jsonb_build_object('ok', true, 'left', lim - used - 1);
 end $$;
 
+-- The leader's one-line note on a lot they've voted on (blank clears it). Only the leader's code can write one.
+create or replace function pv_set_note(p_code text, p_parcel text, p_note text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare c pv_codes; nt text := nullif(trim(coalesce(p_note, '')), '');
+begin
+  select * into c from pv_codes where code = pv_norm(p_code);
+  if not found then
+    if pv_over('miss', 30, interval '10 minutes') then return pv_err('too_many_attempts'); end if;
+    perform pv_note('miss'); return pv_err('not_member');
+  end if;
+  if not exists (select 1 from pv_maps where id = c.map_id and leader_member = c.member) then return pv_err('not_leader'); end if;
+  if length(nt) > 80 then return pv_err('bad_note'); end if;
+  update pv_votes set note = nt where map_id = c.map_id and parcel_id = pv_norm(p_parcel) and member = c.member;
+  if not found then return pv_err('no_vote'); end if;
+  return jsonb_build_object('ok', true);
+end $$;
+
 create or replace function pv_unvote(p_code text, p_parcel text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare c pv_codes; pid text := pv_norm(p_parcel); ch text;
@@ -469,10 +524,19 @@ language sql stable security definer set search_path = public as $$
         from pv_votes where parcel_id = pv_norm(p_parcel) group by map_id) t join pv_maps m on m.id = t.map_id
 $$;
 
+-- The leader's votes on a map: [[parcel, answer or null, note], ...].
+create or replace function pv_leader(p_map text) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_array(v.parcel_id, v.choice, v.note)), '[]')
+  from pv_maps m join pv_votes v on v.map_id = m.id and v.member = m.leader_member
+  where m.id = p_map
+$$;
+
 create or replace function pv_record(p_map text default null) returns jsonb   -- every current vote, for download
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('map', v.map_id, 'kind', m.kind, 'question', m.question, 'parcel', v.parcel_id, 'member', v.member,
-           'choice', v.choice, 'label', c.label, 'at', v.at, 'onsite', v.onsite) order by v.map_id, v.at), '[]')
+           'choice', v.choice, 'label', c.label, 'at', v.at, 'onsite', v.onsite,
+           'leader', v.member is not distinct from m.leader_member, 'note', v.note) order by v.map_id, v.at), '[]')
   from pv_votes v join pv_maps m on m.id = v.map_id left join pv_codes c on c.map_id = v.map_id and c.member = v.member
   where p_map is null or v.map_id = p_map
 $$;
@@ -603,7 +667,10 @@ begin
 end $$;
 grant execute on function pv_list_maps()                                  to anon, authenticated;
 grant execute on function pv_get_map(text)                                to anon, authenticated;
-grant execute on function pv_create_map(text, text, text, int, jsonb, int, boolean, text) to anon, authenticated;
+grant execute on function pv_create_map(text, text, text, int, jsonb, int, boolean, text, text) to anon, authenticated;
+grant execute on function pv_set_leader(text, text, text)                 to anon, authenticated;
+grant execute on function pv_set_note(text, text, text)                   to anon, authenticated;
+grant execute on function pv_leader(text)                                 to anon, authenticated;
 grant execute on function pv_codes(text, text)                            to anon, authenticated;
 grant execute on function pv_add_codes(text, text, int, text)             to anon, authenticated;
 grant execute on function pv_find_by_key(text)                            to anon, authenticated;
