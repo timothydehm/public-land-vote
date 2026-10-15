@@ -881,7 +881,7 @@ async function showMap(id, lot) {
   $("#map").hidden = false; gl.resize();
   painted.clear(); paintAll(); applyView();
   if (lot && S.byId.has(lot)) { flyTo(lot); select(lot); }
-  else if (switching && matchMedia("(pointer: coarse)").matches) locate(false);   // on phones, start where the voter is
+  else if (switching && !fitVoted() && matchMedia("(pointer: coarse)").matches) locate(false);   // the voted area; with no votes yet, on phones, where the voter is
   startLive();
 }
 // The page's own controls, wired once per map visit.
@@ -1291,7 +1291,10 @@ async function ensureMap() {
     const f = exact.length ? exact : gl.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ["lots-fill", "lots-dots"] });
     const hit = f.find(x => x.layer.id === "lots-fill") || f[0];
     if (!hit) return closeLot();
-    if (gl.getZoom() < CONFIG.selectZoom) { closeLot(); return hintPill("Zoom in to vote"); }
+    if (gl.getZoom() < CONFIG.selectZoom) {   // too far out to pick one lot: zoom in on the tap instead
+      closeLot(); gl.easeTo({ center: e.lngLat, zoom: CONFIG.selectZoom + 1.5, duration: calm() ? 0 : 500 });
+      return hintPill("Zoom in to vote");
+    }
     select(hit.id ?? normId(hit.properties.id));
   });
   gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length && gl.getZoom() >= CONFIG.selectZoom ? "pointer" : ""; });
@@ -1307,6 +1310,20 @@ function keepInView(id) {
     : { left: 20, right: W - 20, top: 70, bottom: dockTop - 16 };
   if (pt.x > r.left && pt.x < r.right && pt.y > r.top && pt.y < r.bottom) return;
   gl.easeTo({ center: [p.cx, p.cy], offset: [(r.left + r.right) / 2 - W / 2, (r.top + r.bottom) / 2 - H / 2], duration: calm() ? 0 : 350 });
+}
+// A map opens on the lots that already have votes: the first votes set the area and the first recommendations
+// for everyone after. A few stray lots far away (the outer 5% each way, once there are 10+) don't stretch it.
+function votedBounds() {
+  const P = [...S.tally.keys()].map(id => S.byId.get(id)?.properties).filter(Boolean);
+  if (!P.length) return null;
+  const xs = P.map(p => p.cx).sort((a, b) => a - b), ys = P.map(p => p.cy).sort((a, b) => a - b), t = P.length >= 10 ? Math.floor(P.length * 0.05) : 0;
+  return [[xs[t], ys[t]], [xs[xs.length - 1 - t], ys[ys.length - 1 - t]]];
+}
+function fitVoted() {
+  const b = votedBounds(); if (!b || !gl) return false;
+  const dock = $("[data-dock]")?.offsetHeight || 90, side = Math.min(40, innerWidth / 10);
+  gl.fitBounds(b, { padding: { top: 70, bottom: Math.min(dock + 24, innerHeight / 2), left: side, right: side }, maxZoom: 17.5, duration: 0 });
+  return true;
 }
 function showMe() { gl?.getSource("me")?.setData({ type: "FeatureCollection", features: S.me ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: S.me } }] : [] }); }
 function flyTo(id) { const p = S.byId.get(id).properties; gl.jumpTo({ center: [p.cx, p.cy], zoom: Math.max(gl.getZoom(), 17) }); }
