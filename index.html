@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Public Land Voting Tool</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='11' height='11' fill='%2300875F'/%3E%3Crect x='17' y='4' width='11' height='11' fill='%230068A6'/%3E%3Crect x='4' y='17' width='11' height='11' fill='%23E6A200'/%3E%3Crect x='17' y='17' width='11' height='11' fill='%23625579'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='11' height='11' fill='%2300875F'/%3E%3Crect x='17' y='4' width='[...]
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -77,7 +77,7 @@ input.text:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .grid3 label{font-weight:500;font-size:14px;display:flex;align-items:center;gap:6px}
 .field label.check{display:flex;font-weight:400;font-size:15px;margin:0}
-@media (max-width:520px){.grid2,.grid3{grid-template-columns:1fr}.grid3>div{display:flex;align-items:center;justify-content:space-between;gap:10px}.grid3 label{margin:0!important}.grid3 input{max-width:110px}}
+@media (max-width:520px){.grid2,.grid3{grid-template-columns:1fr}.grid3>div{display:flex;align-items:center;justify-content:space-between;gap:10px}.grid3 label{margin:0!important}.grid3 input{max-[...]
 .kinds{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.kinds{grid-template-columns:1fr}}
 .kinds label{display:block;border:1.5px solid var(--line);border-radius:var(--r-ctl);padding:11px 13px;cursor:pointer;font-weight:400;margin:0}
@@ -178,12 +178,12 @@ table.tl{width:100%;border-collapse:collapse;font-size:14px}
 table.tl td{padding:3px 0}
 table.tl td:first-child{display:flex;align-items:center;gap:7px}
 table.tl td.num{text-align:right;font-weight:600}
-table.tl tr.me td{font-weight:700}
+.table.tl tr.me td{font-weight:700}
 .cx h3{font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 4px;letter-spacing:.01em}
-dl.city{display:grid;grid-template-columns:minmax(110px,42%) 1fr;gap:4px 10px;margin:0;font-size:13px}
-dl.city dt{color:var(--muted)}
-dl.city dd{margin:0;word-break:break-word}
-dl.city dd.blank{color:#a19da6;font-style:italic}
+.dl.city{display:grid;grid-template-columns:minmax(110px,42%) 1fr;gap:4px 10px;margin:0;font-size:13px}
+.dl.city dt{color:var(--muted)}
+.dl.city dd{margin:0;word-break:break-word}
+.dl.city dd.blank{color:#a19da6;font-style:italic}
 .others a{display:block;text-decoration:none;padding:5px 0;font-size:13px}
 .others .oq{font-weight:600;line-height:1.3}
 .others .on{color:var(--muted)}
@@ -223,10 +223,10 @@ button.mrow:hover,a.mrow:hover{background:var(--mist)}
 .list .bar{display:flex;gap:8px;position:sticky;top:0;padding:8px 0;background:var(--mist);z-index:1}
 .list .bar input{flex:1;min-width:0}
 .list .bar select{width:auto;max-width:45%}
-.lot{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--paper);border:0;border-radius:12px;padding:10px 13px;margin-top:6px;box-shadow:0 1px 2px rgba(29,26,38,.06)}
+.lot{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--paper);border:0;border-radius:12px;padding:10px 13px;margin-top:6px;box-sha[...]
 .lot .ll{font-weight:600;font-size:15px;line-height:1.3}
 .lot .lp{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.chip{min-width:28px;height:24px;padding:0 7px;border-radius:6px;display:inline-grid;place-items:center;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;border:1px solid rgba(29,26,38,.12);flex:none}
+.chip{min-width:28px;height:24px;padding:0 7px;border-radius:6px;display:inline-grid;place-items:center;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;border:1px solid rgba(29,2[...]
 .list .more{font-size:13.5px;color:var(--muted);text-align:center;padding:14px}
 
 /* toast: only for problems */
@@ -310,12 +310,12 @@ const lower = k => (CH[k] || YES).label.toLowerCase();
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
 const QR_JS = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
 const PROTOTYPE = new URLSearchParams(location.search).has("prototype") || !CONFIG.supabaseUrl || !CONFIG.supabaseKey;
-const WORDS = `acorn alder amber anchor apple arbor ash aspen aster autumn badger barley basil bay beach beacon bear beaver beech bell bench berry birch bison bloom bluff boat bramble branch breeze brick bridge brook bud burrow cabin canal canopy cardinal cedar chalk cherry chestnut chimney cider clay cloud clover coast cobalt comet copper coral corn cove coyote crane creek cricket crow cypress daisy dawn deer delta dew dove dune dusk eagle earth elm ember falcon fennel fern field finch fir firefly flint fog forest fox frog frost garden gate ginger glade glen goose granite grape grass grove gull harbor hare harvest hawk hazel heath hedge heron hickory hill hollow honey ibis iris ivy jade jay juniper kale kestrel lake lamp lane lantern larch lark laurel leaf lemon lilac lily lime linden lynx maple marsh meadow melon mill mink mint mist moon moss moth nest newt nutmeg oak oat ocean olive orchard oriole osprey otter owl pansy park path peach pear pebble pepper pier pine plaza plum pond poplar poppy porch prairie quail quarry rabbit rain raven reed ridge river robin rock rose rowan rye sage salt sand sapling sedge seed shore sky slate snow sorrel sparrow spring spruce square squirrel stone stork storm stream summer sun swallow swan sycamore teal tern thistle thyme tide timber toad tower trail trout tulip turtle valley violet walnut warbler wave whale wheat willow wind winter wolf wren yarrow`.split(/\s+/);
+const WORDS = `acorn alder amber anchor apple arbor ash aspen aster autumn badger barley basil bay beach beacon bear beaver beech bell bench berry birch bison bloom bluff boat bramble branch bree[...]
 
 /* ------------------------------------------------------------- utilities */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const esc = s => String(s ?? "").replace(/[&<>\"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = n => new Intl.NumberFormat().format(n);
 const plural = (n, one, many) => `${fmt(n)} ${n === 1 ? one : many}`;
 const sum = a => a.reduce((x, y) => x + y, 0);
@@ -377,7 +377,7 @@ const ERR = {
   network: "Couldn't reach the record. Check the connection and try again."
 };
 const errText = e => { const m = String(e?.message || e || ""); return ERR[m] || (/fetch|network|Failed|timeout|load failed/i.test(m) ? ERR.network : m || "Something went wrong."); };
-function loadScript(src) { return new Promise((ok, no) => document.head.appendChild(Object.assign(document.createElement("script"), { src, onload: ok, onerror: () => no(new Error("network")) }))); }
+function loadScript(src) { return new Promise((ok, no) => document.head.appendChild(Object.assign(document.createElement("script"), { src, onload: ok, onerror: () => no(new Error("network")) })))[...]
 const swatches = m => answersOf(m).map(a => `<i class="sw" style="background:${a.ramp[3]}"></i>`).join("");
 
 /* =====================================================================
@@ -394,23 +394,23 @@ const LocalStore = (() => {
   const save = () => { if (!ls.set(DB_KEY, db)) toast("This browser couldn't save. Is it in private mode?"); };
   const mapOr404 = id => { const m = db.maps[id]; if (!m) throw new Error("map_not_found"); m.kind ||= "question"; return m; };
   const codesOf = id => Object.entries(db.codes).filter(([, c]) => c.map === id);
-  const votesOf = id => Object.entries(db.votes).filter(([k]) => k.startsWith(id + "|")).map(([k, v]) => { const [, parcel, member] = k.split("|"); return { parcel, member: +member, choice: null, ...v }; });
+  const votesOf = id => Object.entries(db.votes).filter(([k]) => k.startsWith(id + "|")).map(([k, v]) => { const [, parcel, member] = k.split("|"); return { parcel, member: +member, choice: null,[...]
   const byOf = votes => Object.fromEntries(CHOICES.map(c => [c.key, votes.filter(v => v.choice === c.key).length]));
   const labelOf = (map, member) => Object.values(db.codes).find(c => c.map === map && c.member === member)?.label || null;
   const pub = m => {
     const kind = m.kind || "question", codes = codesOf(m.id).map(([, c]) => c).sort((a, b) => a.member - b.member), votes = votesOf(m.id), groups = [];
-    for (const c of codes) { let g = groups.find(x => x.label === (c.label || null)); if (!g) groups.push(g = { label: c.label || null, issued: 0, used: 0 }); g.issued++; if (c.used_at) g.used++; }
+    for (const c of codes) { let g = groups.find(x => x.label === (c.label || null)); if (!g) groups.push(g = { label: c.label || null, issued: 0, used: 0 }); g.issued++; if (c.used_at) g.used++;[...]
     return { id: m.id, kind, question: m.question, steward: m.steward, budget: kind === "question" ? m.budget : null, budgets: kind === "land_bank" ? m.budgets : null,
-      onsite: m.onsite, created_at: m.created_at, leader: m.leader || null, leader_member: m.leader_member || null, issued: codes.length, used: codes.filter(c => c.used_at).length, votes: votes.length,
+      onsite: m.onsite, created_at: m.created_at, leader: m.leader || null, leader_member: m.leader_member || null, issued: codes.length, used: codes.filter(c => c.used_at).length, votes: votes.l[...]
       lots: new Set(votes.map(v => v.parcel)).size, by: kind === "land_bank" ? byOf(votes) : null, groups };
   };
   const cleanLabel = l => { const t = String(l ?? "").trim(); if (t.length > 80) throw new Error("bad_label"); return t || null; };
-  const newCodes = (m, n, label) => { const out = []; for (let i = 0; i < n; i++) { let c; do c = randStr(8); while (db.codes[c]); db.codes[c] = { map: m.id, member: ++m.members, label, used_at: null }; out.push(c); } return out; };
+  const newCodes = (m, n, label) => { const out = []; for (let i = 0; i < n; i++) { let c; do c = randStr(8); while (db.codes[c]); db.codes[c] = { map: m.id, member: ++m.members, label, used_at: [...]
   const codeOr = (code, err) => { const c = db.codes[normCode(code)]; if (!c) throw new Error(err); return c; };
   return {
     async maps() { return Object.values(db.maps).map(pub).sort((a, b) => b.created_at.localeCompare(a.created_at)); },
     async map(id) { return pub(mapOr404(id)); },
-    async create({ kind = "question", question, steward, budget, budgets, members, onsite, label, leader }) {
+    async create({ kind = "question", question, steward, budget, budgets, members, onsite, label }) {
       if (!["question", "land_bank"].includes(kind)) throw new Error("bad_kind");
       let q = String(question || "").trim(); if (kind === "land_bank" && !q) q = LAND_BANK_QUESTION;
       if (!q || q.length > 200) throw new Error("bad_question");
@@ -425,7 +425,7 @@ const LocalStore = (() => {
       if (ld && ld.length > 60) throw new Error("bad_leader");
       let id; do id = randStr(6).toLowerCase(); while (db.maps[id]);
       const key = threeWords();
-      const m = db.maps[id] = { id, kind, question: q, steward: steward || null, budget: kind === "question" ? budget : null, budgets: b, onsite: !!onsite, created_at: new Date().toISOString(), key: normKey(key), members: 0 };
+      const m = db.maps[id] = { id, kind, question: q, steward: steward || null, budget: kind === "question" ? budget : null, budgets: b, onsite: !!onsite, created_at: new Date().toISOString(), k[...]
       m.leader = ld; const leaderCode = newCodes(m, 1, "Leader")[0]; m.leader_member = 1;
       const codes = newCodes(m, members, lab); save();
       return { map: pub(m), key, codes, leaderCode };
@@ -451,7 +451,7 @@ const LocalStore = (() => {
     },
     async leader(id) { const m = mapOr404(id); return m.leader_member ? votesOf(id).filter(v => v.member === m.leader_member).map(v => [v.parcel, v.choice || "yes", v.note || null]) : []; },
     async findByKey(key) { return Object.values(db.maps).filter(m => m.key === normKey(key)).map(m => m.id); },
-    async addCodes(id, key, n, label) { const m = mapOr404(id); const lab = cleanLabel(label); if (normKey(key) !== m.key) throw new Error("bad_key"); const c = newCodes(m, n, lab); save(); return c; },
+    async addCodes(id, key, n, label) { const m = mapOr404(id); const lab = cleanLabel(label); if (normKey(key) !== m.key) throw new Error("bad_key"); const c = newCodes(m, n, lab); save(); retur[...]
     async join(code) { const c = codeOr(code, "code_not_found"); return { map: c.map, member: c.member, label: c.label || null }; },
     async vote(code, parcel, choice, onsite) {
       const c = codeOr(code, "not_member"), m = mapOr404(c.map), k = `${m.id}|${parcel}|${c.member}`;
@@ -465,7 +465,7 @@ const LocalStore = (() => {
       if (used >= lim) throw new Error("budget_used");
       if (m.onsite && !onsite) throw new Error("off_site");
       const at = new Date().toISOString();
-      db.votes[k] = { at, onsite: m.onsite ? true : null, choice, note: cur?.note || null };
+      db.votes[k] = { at, onsite: m.onsite ? true : null, choice };
       c.used_at ||= at;
       db.history.push({ map: m.id, parcel, member: c.member, action: cur ? "change" : "vote", choice, at, onsite: m.onsite ? true : null });
       save();
@@ -485,12 +485,12 @@ const LocalStore = (() => {
     async lotMaps(parcel) {
       const by = new Map();
       for (const [k, v] of Object.entries(db.votes)) { const [map, p] = k.split("|"); if (p === parcel && db.maps[map]) { const a = by.get(map) || []; a.push(v); by.set(map, a); } }
-      return [...by].map(([id, vs]) => { const m = mapOr404(id); return { id, kind: m.kind, question: m.question, steward: m.steward, votes: vs.length, by: m.kind === "land_bank" ? byOf(vs) : null }; })
+      return [...by].map(([id, vs]) => { const m = mapOr404(id); return { id, kind: m.kind, question: m.question, steward: m.steward, votes: vs.length, by: m.kind === "land_bank" ? byOf(vs) : nul[...]
         .sort((a, b) => b.votes - a.votes);
     },
     async record(id) {   // every current vote, for download
       const ids = id ? [id] : Object.keys(db.maps);
-      return ids.flatMap(mid => { const m = mapOr404(mid); return votesOf(mid).map(v => ({ map: mid, kind: m.kind, question: m.question, parcel: v.parcel, member: v.member, choice: v.choice, label: labelOf(mid, v.member), at: v.at, onsite: v.onsite, leader: v.member === m.leader_member, note: v.note || null })); })
+      return ids.flatMap(mid => { const m = mapOr404(mid); return votesOf(mid).map(v => ({ map: mid, kind: m.kind, question: m.question, parcel: v.parcel, member: v.member, choice: v.choice, labe[...]
         .sort((a, b) => a.map.localeCompare(b.map) || a.at.localeCompare(b.at));
     },
     // prototype only
@@ -498,1047 +498,4 @@ const LocalStore = (() => {
     importAll(text) { const d = JSON.parse(text); if (!d || !d.maps || !d.codes || !d.votes) throw new Error("That file isn't a saved record."); db = { history: [], ...d }; save(); },
     reset() { db = empty(); save(); }
   };
-})();
 
-// The shared record: the same functions, as calls to the database.
-let sbc = null;
-const sb = () => sbc || (sbc = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } }));
-async function rpc(fn, args) {
-  const { data, error } = await sb().rpc(fn, args || {});
-  if (error) throw new Error(/fetch/i.test(error.message || "") ? "network" : error.message || "unknown");
-  if (data && !Array.isArray(data) && data.error) throw new Error(data.error);
-  return data;
-}
-const RemoteStore = {
-  maps: () => rpc("pv_list_maps"),
-  map: id => rpc("pv_get_map", { p_id: id }),
-  async create({ kind, question, steward, budget, budgets, members, onsite, label, leader }) {
-    const r = await rpc("pv_create_map", { p_question: question, p_steward: steward, p_kind: kind, p_budget: kind === "question" ? budget : null,
-      p_budgets: kind === "land_bank" ? budgets : null, p_members: members, p_onsite: onsite, p_label: label || null, p_leader: leader || null });
-    return { ...r, leaderCode: r.leader_code };
-  },
-  setLeader: (id, key, name) => rpc("pv_set_leader", { p_map: id, p_key: key, p_name: name }),
-  setNote: (code, parcel, note) => rpc("pv_set_note", { p_code: code, p_parcel: parcel, p_note: note }),
-  async leader(id) { return (await rpc("pv_leader", { p_map: id })).map(([p, c, n]) => [p, c || "yes", n || null]); },
-  codes: (id, key) => rpc("pv_codes", { p_map: id, p_key: key }),
-  addCodes: (id, key, n, label) => rpc("pv_add_codes", { p_map: id, p_key: key, p_n: n, p_label: label || null }),
-  findByKey: key => rpc("pv_find_by_key", { p_key: key }),
-  join: code => rpc("pv_join", { p_code: code }),
-  vote: (code, parcel, choice, onsite) => rpc("pv_vote", { p_code: code, p_parcel: parcel, p_choice: choice === "yes" ? null : choice, p_onsite: onsite }),
-  unvote: (code, parcel) => rpc("pv_unvote", { p_code: code, p_parcel: parcel }),
-  async tally(id) { return new Map((await rpc("pv_tally", { p_map: id })).map(([p, ...n]) => [p, n])); },
-  async mine(code) { return new Map((await rpc("pv_mine", { p_code: code })).map(([p, c]) => [p, c || "yes"])); },
-  lotMaps: parcel => rpc("pv_lot_maps", { p_parcel: parcel }),
-  record: id => rpc("pv_record", { p_map: id || null })
-};
-const Store = PROTOTYPE ? LocalStore : RemoteStore;
-
-// Which codes this device has entered: map id -> code
-const CODES_KEY = PROTOTYPE ? "plvt:my-codes" : "plvt:my-codes:live";
-const myCodes = { all() { return ls.get(CODES_KEY) || {}; }, get(id) { return this.all()[id] || null; },
-  set(id, code) { const a = this.all(); a[id] = code; ls.set(CODES_KEY, a); }, del(id) { const a = this.all(); delete a[id]; ls.set(CODES_KEY, a); } };
-const stewardKeys = {};   // unlocked this visit: map id -> key
-/* =====================================================================
-   The lots: the city's land bank layer, read live
-   ===================================================================== */
-const PARCEL_FORMAT = 2;
-const idb = {
-  open() { return new Promise((ok, no) => { const r = indexedDB.open("plvt", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); },
-  async get(k) { try { const d = await this.open(); return await new Promise((ok, no) => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }); } catch { return null; } },
-  async set(k, v) { try { const d = await this.open(); await new Promise((ok, no) => { const t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = ok; t.onerror = () => no(t.error); }); } catch {} }
-};
-async function getJson(url) {
-  const res = await fetch(url); if (!res.ok) throw new Error(`The city's service answered ${res.status}`);
-  const d = await res.json(); if (d && d.error) throw new Error(d.error.message || "The city's service returned an error");
-  return d;
-}
-async function loadParcels() {
-  const L = CONFIG.parcelsUrl.replace(/\/+$/, "");
-  const [meta, { count }] = await Promise.all([getJson(`${L}?f=json`), getJson(`${L}/query?where=1%3D1&returnCountOnly=true&f=json`)]);
-  const edited = meta.editingInfo?.dataLastEditDate || meta.editingInfo?.lastEditDate || null;
-  const key = `v${PARCEL_FORMAT}|${L}|${edited}|${count}`;
-  const hit = await idb.get("parcels");
-  if (hit && hit.key === key) return hit.fc;
-  const oid = meta.objectIdField || "OBJECTID";
-  const fields = (meta.fields || []).filter(f => f.name !== oid && f.type !== "esriFieldTypeGeometry" && !/^shape/i.test(f.name)).map(f => ({ name: f.name, alias: f.alias || f.name }));
-  const size = Math.min(meta.maxRecordCount || 1000, 2000), offsets = [];
-  for (let o = 0; o < count; o += size) offsets.push(o);
-  const q = o => new URLSearchParams({ where: "1=1", outFields: "*", outSR: "4326", geometryPrecision: "6", orderByFields: oid, resultOffset: o, resultRecordCount: size, f: "geojson" });
-  const pages = await Promise.all(offsets.map(o => getJson(`${L}/query?${q(o)}`)));
-  const raw = pages.flatMap(p => p.features || []);
-  if (raw.length < count) throw new Error(`Only ${fmt(raw.length)} of ${fmt(count)} lots came back`);
-  const fc = buildParcels(raw, fields.length ? fields : null);
-  fc.metadata = { edited, count: fc.features.length, fields: fields.length ? fields : Object.keys(raw[0]?.properties || {}).filter(k => k !== oid).map(n => ({ name: n, alias: n })) };
-  idb.set("parcels", { key, fc });
-  return fc;
-}
-// City records -> what the map needs: id, label, center point, plus the city's own fields for the parcel card.
-function buildParcels(raw) {
-  const items = [], seen = new Set();
-  for (const f of raw) {
-    const g = f.geometry; if (!g || (g.type !== "Polygon" && g.type !== "MultiPolygon")) continue;
-    const p = f.properties || {}, id = normId(p[CONFIG.idField]); if (!id || seen.has(id)) continue;
-    seen.add(id);
-    const [cx, cy] = centroid(g), city = { ...p }; delete city.OBJECTID;
-    items.push({ addr: parseAddress(p[CONFIG.addressField]), f: { type: "Feature", geometry: g, properties: { id, d: displayId(String(p[CONFIG.idField]).trim()), a: "", cx: +cx.toFixed(6), cy: +cy.toFixed(6), city } } });
-  }
-  const cell = 0.002, grid = new Map(), gk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
-  for (const it of items) if (it.addr?.full) { const k = gk(it.f.properties.cx, it.f.properties.cy); grid.has(k) ? grid.get(k).push(it) : grid.set(k, [it]); }
-  for (const it of items) {
-    const P = it.f.properties, a = it.addr;
-    if (a?.full) { P.a = a.full; continue; }
-    if (a?.street) { P.a = `Lot on ${a.street}`; continue; }
-    const kx = Math.cos(P.cy * Math.PI / 180), gx = Math.floor(P.cx / cell), gy = Math.floor(P.cy / cell);
-    let best = null, bd = Infinity;
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const b of grid.get(`${gx + dx},${gy + dy}`) || []) {
-      const q = b.f.properties, d = ((q.cx - P.cx) * kx) ** 2 + (q.cy - P.cy) ** 2; if (d < bd) { bd = d; best = b; }
-    }
-    const meters = best ? Math.sqrt(bd) * 111320 : Infinity;
-    P.a = meters < 400 ? `${meters < 60 ? "Next to" : "Near"} ${best.addr.full}` : `Parcel ${P.d}`;
-  }
-  return { type: "FeatureCollection", features: items.map(it => it.f) };
-}
-function titleCase(s) {
-  return String(s).toLowerCase().split(/\s+/).filter(Boolean).map(w =>
-    /^\d+(st|nd|rd|th)$/.test(w) ? w : /^\d/.test(w) || /^(n|s|e|w|ne|nw|se|sw)$/.test(w) ? w.toUpperCase()
-    : w.replace(/(^|['-])([a-z])/g, (_, x, y) => x + y.toUpperCase()).replace(/^Mc([a-z])/, (_, y) => "Mc" + y.toUpperCase())).join(" ");
-}
-function parseAddress(raw) {
-  const s = String(raw ?? "").split(",")[0].replace(/\s+/g, " ").trim();
-  if (!s || /^(null|none|n\/a|0)$/i.test(s)) return null;
-  const m = s.match(/^(\d+[A-Za-z]?(?:-\d+[A-Za-z]?)?)\s+(.+)$/);
-  if (m) return /^0+$/.test(m[1]) ? { street: titleCase(m[2]) } : { full: titleCase(`${m[1]} ${m[2]}`), street: titleCase(m[2]) };
-  if (/\d/.test(s) && !/[A-Za-z]{2,}/.test(s)) return null;
-  return { street: titleCase(s) };
-}
-function centroid(g) {
-  let x = 0, y = 0, n = 0;
-  for (const r of g.type === "Polygon" ? [g.coordinates[0]] : g.coordinates.map(p => p[0])) for (let i = 0; i < r.length - 1; i++) { x += r[i][0]; y += r[i][1]; n++; }
-  return n ? [x / n, y / n] : [0, 0];
-}
-
-/* =====================================================================
-   App state and routing
-   ===================================================================== */
-const S = {
-  fc: null, byId: new Map(), ids: [], fields: [], parcelsError: null,
-  map: null, A: [YES], AK: {}, zero: [0], budgets: {}, totals: [0],
-  code: null, member: null, group: null, tally: new Map(), mine: new Map(), max: 0,
-  view: "mine", mode: "map", sel: null, others: [], more: false, menu: false, skipped: new Set(), me: null,
-  leader: new Map(), lock: null, recField: undefined,
-  listQuery: "", listSort: "votes"
-};
-let parcelsReady = null, gl = null;
-
-function route() {
-  const h = location.hash.replace(/^#\/?/, ""), [path, qs] = h.split("?"), parts = path.split("/").filter(Boolean), q = new URLSearchParams(qs || "");
-  flushAll();
-  if (!parts.length) return showHome();
-  if (parts[0] === "new") return showNew();
-  if (parts[0] === "join" && parts[1]) return joinLink(parts[1]);
-  if (parts[0] === "m" && parts[1]) {
-    if (parts[2] === "codes") return showCodes(parts[1]);
-    if (parts[2] === "about") return showAbout(parts[1]);
-    return showMap(parts[1], q.get("lot") ? normId(q.get("lot")) : null);
-  }
-  location.hash = "";
-}
-// An invite card's QR code opens #/join/<code>: become that member and go straight to the map.
-async function joinLink(code) {
-  try { const r = await Store.join(code); myCodes.set(r.map, normCode(code)); history.replaceState(null, "", `#/m/${r.map}`); route(); }
-  catch (e) { setPage(`<main class="page"><a class="back" href="#/">← All maps</a><h1>That invite code didn't work</h1><p class="lead">${esc(errText(e))}</p></main>`); }
-}
-function setPage(html) {
-  document.body.classList.remove("on-map"); $("#map").hidden = true; clearInterval(liveTimer);
-  if (S.sel && gl) setSel(S.sel, false);
-  S.sel = null; S.menu = false;
-  $("#app").innerHTML = html; window.scrollTo(0, 0);
-}
-const errPage = (e, back = "#/") => setPage(`<main class="page"><a class="back" href="${back}">← All maps</a><h1>${esc(errText(e))}</h1><button class="btn" onclick="route()">Try again</button></main>`);
-
-/* ------------------------------------------------------------------ home */
-async function showHome() {
-  let maps; try { maps = await Store.maps(); } catch (e) { return setPage(`<main class="page"><h1>Public Land Voting Tool</h1><p class="lead">${esc(errText(e))}</p><button class="btn" onclick="route()">Try again</button></main>`); }
-  setPage(`<main class="page">
-    <h1>Public Land Voting Tool</h1>
-    <p class="lead">Public land belongs to all of us. This is a shared place for neighbors, block clubs, and coalitions to say what they want it to become. Each group asks its own question, members vote one lot at a time, and every vote is public. Where maps overlap, groups find each other, start conversations, and find common ground.</p>
-    <div class="panel" style="margin-top:18px">
-      <label for="home-code" style="display:block;font-weight:650;margin-bottom:6px">Have an invite code or a steward key?</label>
-      <form class="join" data-join><input class="text" id="home-code" placeholder="K7P3-QX9M or three words" autocomplete="off" autocapitalize="none" spellcheck="false"><button class="btn btn-dark">Go</button></form>
-      <div class="muted" style="font-size:13.5px;margin-top:6px">An invite code takes you to your map to vote. A steward key takes you to that map's invite codes.</div>
-      <div class="form-msg" data-msg hidden></div>
-    </div>
-    <div class="row" style="justify-content:space-between;margin-top:30px"><h2 style="margin:0">Maps</h2><a class="btn btn-sm" href="#/new">Start a map</a></div>
-    <div class="maps" style="margin-top:12px">${maps.length ? maps.map(m => `<a class="map-row" href="#/m/${m.id}">
-        <div class="q">${esc(m.question)}</div>
-        <div class="meta">${m.kind === "land_bank" ? `<span class="kind">${swatches(m)}</span>Land bank map · ` : ""}${m.steward ? `${esc(m.steward)} · ` : ""}${esc(budgetText(m))} each · ${fmt(m.used)} of ${fmt(m.issued)} members voted · ${plural(m.votes, "vote", "votes")} on ${plural(m.lots, "lot", "lots")}${m.onsite ? " · on-site" : ""}</div></a>`).join("")
-      : `<div class="empty">No maps yet.</div>`}</div>
-    <div class="tools no-print">
-      ${PROTOTYPE ? `<b style="color:var(--ink)">Prototype.</b> Everything here is saved in this browser only, apart from the public record.
-      <div class="row" style="margin-top:6px;gap:4px 14px">
-        <button class="link" data-sample>Add sample maps</button>
-        <button class="link" data-dl>Download every vote (CSV)</button>
-        <button class="link" data-export>Save the whole record (JSON)</button>
-        <label class="link" style="cursor:pointer">Load a saved record<input type="file" accept=".json,application/json" data-import hidden></label>
-        <button class="link" data-reset>Erase everything</button>
-      </div>` : `Every vote on every map is public. <button class="link" data-dl>Download them all (CSV)</button>. No names or locations are kept; members are numbers.`}
-      ${S.parcelsError ? `<div class="form-msg">The city's lots didn't load: ${esc(S.parcelsError)}</div>` : ""}
-    </div>
-  </main>`);
-  $("[data-join]").onsubmit = async e => {
-    e.preventDefault(); const msg = $("[data-msg]"); msg.hidden = true;
-    const raw = $("#home-code").value;
-    if (normKey(raw).split(" ").length >= 3) {   // three words: a steward key
-      let ids; try { ids = await Store.findByKey(raw); } catch (err) { msg.textContent = errText(err); msg.hidden = false; return; }
-      if (ids.length) { ids.forEach(id => stewardKeys[id] = raw); location.hash = `#/m/${ids[0]}/codes`; return; }
-      msg.textContent = PROTOTYPE ? "No map saved in this browser has that steward key. Check the words, and make sure you're in the same browser where the map was made." : "No map has that steward key. Check the three words.";
-      msg.hidden = false; return;
-    }
-    try { const r = await Store.join(raw); myCodes.set(r.map, normCode(raw)); location.hash = `#/m/${r.map}`; }
-    catch (err) { msg.textContent = errText(err); msg.hidden = false; }
-  };
-  $("[data-dl]").onclick = () => downloadVotes();
-  if (!PROTOTYPE) return;
-  $("[data-export]").onclick = () => downloadFile(`public-land-votes-record-${stamp()}.json`, Store.exportAll(), "application/json");
-  $("[data-import]").onchange = async e => { try { Store.importAll(await e.target.files[0].text()); showHome(); } catch (err) { toast(err.message); } };
-  $("[data-reset]").onclick = () => { if (confirm("Erase every map, code, and vote saved in this browser?")) { Store.reset(); ls.del("plvt:my-codes"); showHome(); } };
-  $("[data-sample]").onclick = async e => { e.target.disabled = true; e.target.textContent = "Adding…"; try { await addSamples(); showHome(); } catch (err) { toast(errText(err)); e.target.disabled = false; } };
-}
-
-/* ----------------------------------------------------------- downloads */
-const disp = p => S.byId.get(p)?.properties.d || displayId(p), lotLabel = p => S.byId.get(p)?.properties.a || "";
-// Every current vote: on one map, or on all of them.
-async function downloadVotes(id) {
-  try {
-    const rows = await Store.record(id);
-    downloadFile(`public-land-votes${id ? "-" + id : ""}-${stamp()}.csv`,
-      csv([["map", "question", "parcel", "label", "answer", "member", "group", "voted_at", "on_site", "leader", "note"],
-        ...rows.map(r => [r.map, r.question, disp(r.parcel), lotLabel(r.parcel), r.choice ? CH[r.choice]?.label || r.choice : "yes", r.member, r.label || "", r.at, r.onsite == null ? "" : r.onsite ? "yes" : "no", r.leader ? "yes" : "", r.note || ""])]), "text/csv");
-  } catch (e) { toast(errText(e)); }
-}
-// Land bank maps: one row per lot with votes for each answer.
-async function downloadTotals(id) {
-  try {
-    const m = await Store.map(id), A = answersOf(m), t = await Store.tally(id);
-    const rows = [...t].map(([p, n]) => { const l = leadingOf(n, A); return [disp(p), lotLabel(p), ...n, sum(n), l === "tie" ? "Tie" : l ? CH[l].label : ""]; }).sort((a, b) => b[5] - a[5]);
-    downloadFile(`public-land-totals-${id}-${stamp()}.csv`, csv([["parcel", "label", ...A.map(c => c.key), "total", "leading"], ...rows]), "text/csv");
-  } catch (e) { toast(errText(e)); }
-}
-
-/* --------------------------------------------------------- start a map */
-function showNew() {
-  setPage(`<main class="page">
-    <a class="back" href="#/">← All maps</a>
-    <h1>Start a map</h1>
-    <p class="lead">Every map is the city's whole land bank inventory. You set the terms; they're shown with the map, and you're responsible for them.</p>
-    <form class="panel" data-new style="margin-top:16px">
-      <div class="kinds" role="radiogroup" aria-label="Kind of map">
-        <label><input type="radio" name="kind" value="land_bank" checked><b>${CHOICES.map(c => `<i class="sw" style="background:${c.ramp[3]}"></i>`).join("")} Land bank map</b><span>Open space, development, or yard expansion: the city's land bank programs. Comparable with every other land bank map.</span></label>
-        <label><input type="radio" name="kind" value="question"><b><i class="sw" style="background:${YES.ramp[3]}"></i> Question map</b><span>Your own question. A vote means yes.</span></label>
-      </div>
-      <div class="field"><label for="n-q">The question</label>
-        <textarea id="n-q" required maxlength="200">${esc(LAND_BANK_QUESTION)}</textarea></div>
-      <div class="field"><label for="n-s">Coalition or steward</label><input class="text" id="n-s" maxlength="80" placeholder="Hough Block Club Network">
-        <div class="hint">Shown with the map as the group responsible for it.</div></div>
-      <div class="field"><label for="n-ld">Leader</label><input class="text" id="n-ld" maxlength="60" placeholder="Tim (WRLC)">
-        <div class="hint">The person whose votes show on each lot as the map's recommendation. They get their own code and count as one voter. Blank: the coalition's name.</div></div>
-      <div class="field" data-lb><span class="lbl">Votes per member</span>
-        <div class="grid3">${CHOICES.map(c => `<div><label for="n-${c.key}" style="margin-bottom:5px"><i class="sw" style="background:${c.ramp[3]}"></i>${esc(c.label)}</label><input class="text" id="n-${c.key}" type="number" min="0" max="100" value="5" required></div>`).join("")}</div>
-        <div class="hint">0 leaves that answer off the map. Fewer votes make members choose.</div></div>
-      <div class="field" data-qm hidden><label for="n-b">Votes per member</label><input class="text" id="n-b" type="number" min="1" max="100" value="5" style="max-width:160px">
-        <div class="hint">Fewer votes make members choose.</div></div>
-      <div class="grid2">
-        <div class="field"><label for="n-m">Invite codes</label><input class="text" id="n-m" type="number" min="1" max="2000" value="40" required>
-          <div class="hint">One per member. You can add more later.</div></div>
-        <div class="field"><label for="n-l">Code group</label><input class="text" id="n-l" maxlength="80" placeholder="Hough training, Oct 12">
-          <div class="hint">Public, so turnout can be read by group. No names.</div></div>
-      </div>
-      <div class="field"><label class="check"><input type="checkbox" id="n-o"><span><b>On-site voting.</b> A vote counts only if it's cast within ${CONFIG.onsiteMeters} m of the lot. Only a yes/no is kept, never a location.</span></label></div>
-      <div class="row" style="margin-top:20px"><button class="btn btn-dark">Create the map</button></div>
-    </form>
-  </main>`);
-  const kind = () => $("[name=kind]:checked").value, q = $("#n-q");
-  $$("[name=kind]").forEach(r => r.onchange = () => {
-    const lb = kind() === "land_bank";
-    $("[data-lb]").hidden = !lb; $("[data-qm]").hidden = lb;
-    if (lb && !q.value.trim()) q.value = LAND_BANK_QUESTION;
-    if (!lb && q.value.trim() === LAND_BANK_QUESTION) q.value = "";
-    q.placeholder = lb ? "" : "Where should our block club put a garden?";
-  });
-  $("[data-new]").onsubmit = async e => {
-    e.preventDefault();
-    const btn = $("[data-new] .btn-dark"), k = kind(), int = (v, lo, hi, d) => Math.max(lo, Math.min(hi, Math.round(Number(v)) || d));
-    const spec = { kind: k, question: q.value.trim(), steward: $("#n-s").value.trim(), leader: $("#n-ld").value.trim(), members: int($("#n-m").value, 1, 2000, 1), onsite: $("#n-o").checked, label: $("#n-l").value.trim() };
-    if (k === "land_bank") spec.budgets = Object.fromEntries(CHOICES.map(c => [c.key, int($(`#n-${c.key}`).value, 0, 100, 0)]));
-    else spec.budget = int($("#n-b").value, 1, 100, 5);
-    btn.disabled = true; btn.textContent = "Creating…";
-    let r; try { r = await Store.create(spec); }
-    catch (err) { toast(errText(err), 6000); btn.disabled = false; btn.textContent = "Create the map"; return; }
-    stewardKeys[r.map.id] = r.key; S.freshKey = r.key;
-    location.hash = `#/m/${r.map.id}/codes`;
-  };
-}
-
-/* ------------------------------------------- invite codes (steward) */
-async function showCodes(id) {
-  let m; try { m = await Store.map(id); } catch (e) { return errPage(e); }
-  const key = stewardKeys[id];
-  if (!key) {
-    setPage(`<main class="page"><a class="back" href="#/m/${id}">← Back to the map</a><h1>Invite codes</h1>
-      <p class="lead">${esc(m.question)}</p>
-      <form class="panel" data-unlock><label for="k" style="font-weight:600">Steward key</label><div class="join" style="margin-top:4px"><input class="text" id="k" autocomplete="off" autocapitalize="none" placeholder="three words"><button class="btn btn-dark">Show codes</button></div><div class="form-msg" data-msg hidden></div>
-      <p class="muted" style="font-size:14px;margin:10px 0 0">For the map's steward. The three-word key was shown when the map was made.</p></form></main>`);
-    $("[data-unlock]").onsubmit = async e => { e.preventDefault(); try { await Store.codes(id, $("#k").value); stewardKeys[id] = $("#k").value; showCodes(id); } catch (err) { const msg = $("[data-msg]"); msg.textContent = errText(err); msg.hidden = false; } };
-    return;
-  }
-  let codes; try { codes = await Store.codes(id, key); } catch (e) { delete stewardKeys[id]; toast(errText(e)); return showCodes(id); }
-  const fresh = S.freshKey; S.freshKey = null;
-  const here = location.href.split("#")[0], joinUrl = c => `${here}#/join/${c}`;
-  const lead = codes.find(c => c.leader), members = codes.filter(c => !c.leader);
-  const groups = []; for (const c of members) { let g = groups.find(x => x.label === (c.label || null)); if (!g) groups.push(g = { label: c.label || null, codes: [] }); g.codes.push(c); }
-  const gname = g => g.label || "No group";
-  setPage(`<main class="page">
-    <div class="no-print">
-      <a class="back" href="#/m/${id}">← Back to the map</a>
-      <h1>${fresh ? "Your map is ready" : "Invite codes"}</h1>
-      <p class="lead">${esc(m.question)}</p>
-      ${fresh ? `<div class="panel" style="margin-bottom:12px"><div style="font-weight:650">Your steward key</div><div class="key-box"><b>${esc(fresh)}</b></div><p class="muted" style="font-size:14px;margin:0">Keep it. It's the only way back to these codes, and nobody can recover it.</p></div>` : ""}
-      <div class="panel" style="margin-bottom:12px" data-leader>
-        ${lead ? `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div style="font-weight:650">Leader: ${esc(m.leader || "")}</div>
-            <div class="muted" style="font-size:14px">Their votes show on each lot as the map's recommendation, and open the map on the area they voted in. They count as one voter.</div></div>
-            <a class="btn btn-sm btn-dark" href="#/join/${lead.code}">Vote as the leader</a></div>
-          <div class="key-box"><b>${showCode(lead.code)}</b></div>` : `<div style="font-weight:650">Leader</div>
-          <div class="muted" style="font-size:14px">Name a leader to get a leader code. Their votes show on each lot as the map's recommendation, and count as one voter.</div>`}
-        <form class="row" data-ld style="margin-top:8px;flex-wrap:nowrap"><input class="text" id="ld-n" maxlength="60" value="${esc(m.leader || "")}" placeholder="Tim (WRLC)" aria-label="Leader's name" style="min-height:40px;flex:1;min-width:0"><button class="btn btn-sm">${lead ? "Rename" : "Make a leader code"}</button></form>
-      </div>
-      <div class="panel">
-        <div class="row" style="justify-content:space-between"><div><b>${fmt(members.length)}</b> member codes issued, <b>${fmt(members.filter(c => c.used_at).length)}</b> used</div>
-          <div class="row"><button class="btn btn-sm btn-dark" data-print="all">Print invite cards</button><button class="btn btn-sm" data-csv>Download codes</button></div></div>
-        <form data-add style="margin-top:14px"><div style="font-weight:600;font-size:14.5px">Add codes</div>
-          <div class="row" style="margin-top:6px;flex-wrap:nowrap"><input class="text" id="add-n" type="number" min="1" max="1000" value="10" aria-label="How many" style="width:84px;min-height:40px;flex:none">
-            <input class="text" id="add-l" maxlength="80" placeholder="Group, e.g. Glenville walk, Oct 19" aria-label="Code group" style="min-height:40px;flex:1;min-width:0"><button class="btn btn-sm">Add</button></div>
-          <div class="muted" style="font-size:13px;margin-top:5px">The group label is public, so turnout can be read by group. No names.</div></form>
-      </div>
-      ${groups.map((g, gi) => `<div class="panel group" data-group="${gi}">
-        <div class="gh"><div><div class="gl">${esc(gname(g))}</div><div class="gm">${fmt(g.codes.filter(c => c.used_at).length)} of ${plural(g.codes.length, "code", "codes")} used</div></div>
-          ${groups.length > 1 ? `<button class="btn btn-sm" data-print="${gi}">Print this group</button>` : ""}</div>
-        <details ${groups.length === 1 ? "open" : ""}><summary>Codes</summary><table class="t"><thead><tr><th>Member</th><th>Code</th><th>Status</th></tr></thead><tbody>
-          ${g.codes.map(c => `<tr><td>${c.member}</td><td class="code">${showCode(c.code)}</td><td>${c.used_at ? `Voted ${fmtDate(c.used_at)}` : `<span class="muted">Not used</span>`}</td></tr>`).join("")}
-        </tbody></table></details></div>`).join("")}
-    </div>
-    <div class="cards" data-cards hidden></div>
-  </main>`);
-  $$("[data-print]").forEach(b => b.onclick = async () => {
-    const which = b.dataset.print, list = (which === "all" ? members : groups[+which].codes).filter(c => !c.used_at), c = $("[data-cards]");
-    if (!list.length) return toast("Every code here has been used.");
-    c.innerHTML = list.map(x => `<div class="invite"><div class="iq">${esc(m.question)}</div>${x.label ? `<div class="ib">${esc(x.label)}</div>` : ""}<div class="ic">${showCode(x.code)}</div>
-      <div class="it">${m.steward ? esc(m.steward) + " · " : ""}${esc(budgetText(m))}${m.onsite ? ", cast at the lot" : ""}. Scan to vote, or open the address below and enter this code.<br>${esc(here)}</div><div class="qr" data-qr="${esc(joinUrl(x.code))}"></div></div>`).join("");
-    if (!window.qrcode) { b.disabled = true; const t = b.textContent; b.textContent = "Preparing cards…"; try { await loadScript(QR_JS); } catch {} b.disabled = false; b.textContent = t; }
-    if (window.qrcode) $$("[data-qr]", c).forEach(el => { const q = qrcode(0, "M"); q.addData(el.dataset.qr); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); });
-    c.hidden = false; window.print(); c.hidden = true;
-  });
-  $("[data-csv]").onclick = () => downloadFile(`invite-codes-${id}.csv`, csv([["member", "code", "group", "used_at", "leader"], ...codes.map(c => [c.member, showCode(c.code), c.label || "", c.used_at || "", c.leader ? "yes" : ""])]), "text/csv");
-  $("[data-ld]").onsubmit = async e => { e.preventDefault(); try { await Store.setLeader(id, key, $("#ld-n").value); showCodes(id); } catch (err) { toast(errText(err)); } };
-  $("[data-add]").onsubmit = async e => {
-    e.preventDefault(); const n = Math.max(1, Math.min(1000, Math.round(+$("#add-n").value) || 1));
-    try { await Store.addCodes(id, key, n, $("#add-l").value.trim()); showCodes(id); } catch (err) { toast(errText(err)); }
-  };
-}
-
-/* ------------------------------------------- about a map: terms, turnout, downloads */
-async function showAbout(id) {
-  let m; try { m = await Store.map(id); } catch (e) { return errPage(e); }
-  const lb = m.kind === "land_bank", groups = m.groups || [];
-  setPage(`<main class="page">
-    <a class="back" href="#/m/${id}">← Back to the map</a>
-    <h1>${esc(m.question)}</h1>
-    <p class="lead">${lb ? "Land bank map. Its answers match the City of Cleveland Land Bank's programs, so it can be compared with every other land bank map." : "Question map. A vote means yes."}</p>
-    <div class="panel">
-      <table class="t" style="margin:0"><tbody>
-        ${m.steward ? `<tr><td class="muted">Set by</td><td>${esc(m.steward)}</td></tr>` : ""}
-        ${m.leader_member ? `<tr><td class="muted">Leader</td><td>${esc(m.leader || "")}</td></tr>` : ""}
-        <tr><td class="muted">Votes per member</td><td>${esc(budgetText(m))}</td></tr>
-        <tr><td class="muted">Where votes count</td><td>${m.onsite ? `Only at the lot (within ${CONFIG.onsiteMeters} m)` : "Anywhere"}</td></tr>
-        <tr><td class="muted">Started</td><td>${fmtDate(m.created_at)}</td></tr>
-      </tbody></table>
-    </div>
-    <h2>Turnout</h2>
-    <div class="panel">
-      <div><b>${fmt(m.used)}</b> of ${plural(m.issued, "member", "members")} voted · <b>${fmt(m.votes)}</b> ${m.votes === 1 ? "vote" : "votes"} on ${plural(m.lots, "lot", "lots")}</div>
-      ${groups.length > 1 || groups[0]?.label ? `<table class="t" style="margin-top:12px"><thead><tr><th>Code group</th><th>Voted</th></tr></thead><tbody>
-        ${groups.map(g => `<tr><td>${g.label ? esc(g.label) : `<span class="muted">No group</span>`}</td><td class="num">${fmt(g.used)} of ${fmt(g.issued)}</td></tr>`).join("")}</tbody></table>` : ""}
-    </div>
-    <h2>The record</h2>
-    <p><button class="link" data-dl>Every vote (CSV)</button>${lb ? ` · <button class="link" data-dlt>Totals by lot (CSV)</button>` : ""}</p>
-    <h2>Faster voting</h2>
-    <table class="t" style="margin:0"><tbody>
-      <tr><td class="muted">Hold a color</td><td>Long-press it (double-click on a computer). Each lot you tap then gets that color; tapping a lot that already has it takes the vote back. Tap the color again to let go.</td></tr>
-      <tr><td class="muted">1 · 2 · 3</td><td>Vote the selected lot with the first, second, or third color</td></tr>
-      <tr><td class="muted">N</td><td>Next lot nearby you haven't voted on</td></tr>
-      <tr><td class="muted">Esc</td><td>Let go of the lot and of a held color</td></tr>
-    </tbody></table>
-    <div class="tools"><a class="link" href="#/m/${id}/codes">Invite codes</a> <span>(for the map's steward)</span></div>
-  </main>`);
-  $("[data-dl]").onclick = () => downloadVotes(id);
-  $("[data-dlt]")?.addEventListener("click", () => downloadTotals(id));
-}
-
-/* =====================================================================
-   The map. On screen: the map, one bar of choices, and (with a lot
-   selected) the lot's card. Everything that isn't voting is under ⋯.
-   Tap a lot to select it, then tap a color to vote. Tap your color again
-   to take the vote back; tap another color to move it. Long-press (or
-   double-click) a color to hold it: then each lot tapped gets that color.
-   Keys: 1/2/3 vote, N next lot nearby, Esc let go.
-   A map's leader is one member; their votes are shown as its
-   recommendation (the Leader view, and a chip on each lot's card).
-   ===================================================================== */
-const ICON = {
-  mine: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6"/></svg>`,
-  everyone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="16.6" cy="7.4" r="2.6"/><path d="M16.4 12.5c2.5 0 4.4 1.6 4.9 4.4"/></svg>`,
-  more: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`,
-  leader: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V3.5"/><path d="M6 4h11l-2.6 4L17 12H6"/></svg>`,
-  next: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>`,
-  locate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.2"/></svg>`
-};
-// The one hint ("Tap a color to vote.") shows until this browser's first vote, then never again.
-const VOTED_KEY = "plvt:voted-once";
-let votedOnce = !!ls.get(VOTED_KEY);
-function markVoted() { if (!votedOnce) { votedOnce = true; ls.set(VOTED_KEY, 1); } }
-const isWide = () => matchMedia("(min-width: 900px)").matches;
-const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-function shake(el) { if (!el) return; el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
-const answerName = a => a.key === "yes" ? "Yes" : a.label;
-
-function setAnswers(m) {
-  S.A = answersOf(m); S.AK = Object.fromEntries(S.A.map((a, i) => [a.key, { ...a, i }]));
-  S.zero = S.A.map(() => 0); S.budgets = budgetsOf(m);
-}
-async function showMap(id, lot) {
-  let m; try { m = await Store.map(id); } catch (e) { return errPage(e); }
-  const switching = !S.map || S.map.id !== id;
-  if (S.sel && gl) setSel(S.sel, false);
-  S.map = m; setAnswers(m); S.code = myCodes.get(id); S.member = S.group = null; S.sel = null; S.others = []; S.more = false; S.menu = false; S.lock = null;
-  if (switching) { S.view = "mine"; S.mode = "map"; S.listQuery = ""; S.listSort = "votes"; S.tally = new Map(); S.mine = new Map(); S.leader = new Map(); S.skipped = new Set(); }
-  if (S.code) {
-    try { const r = await Store.join(S.code); if (r.map === id) { S.member = r.member; S.group = r.label; } else S.code = null; }
-    catch (e) { if (String(e.message) === "code_not_found") myCodes.del(id); else toast(errText(e)); S.code = null; }
-  }
-  document.body.classList.add("on-map");
-  $("#app").innerHTML = `<div class="list" data-list hidden></div>
-    <button class="locate" data-locate aria-label="Center the map on me">${ICON.locate}</button>
-    <div class="zhint" data-zhint role="status"></div>
-    <div class="dock" data-dock>
-      <section class="card" data-card hidden aria-label="Selected lot"></section>
-      <div class="menu" data-menu hidden></div>
-      <nav class="vbar" data-bar aria-label="Vote"></nav>
-      <form class="idbar" data-join hidden><label class="sr" for="m-code">Invite code</label><input id="m-code" class="code-input" placeholder="Invite code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn btn-dark">Join</button></form>
-    </div>`;
-  wireMap();
-  try { await refresh(); } catch (e) { return errPage(e); }
-  if (S.map?.id !== id) return;
-  buildBar(); renderId(); renderCard();
-  if (!S.fc) {
-    hintPill("Loading lots…", 0);
-    try { await parcelsReady; } catch {}
-    hintPill(null);
-    if (!S.fc) { toast(`The city's lots didn't load. ${S.parcelsError || ""}`, 8000); return; }
-  }
-  await ensureMap();
-  if (S.map?.id !== id || !document.body.classList.contains("on-map")) return;
-  $("#map").hidden = false; gl.resize();
-  painted.clear(); paintAll(); applyView();
-  if (lot && S.byId.has(lot)) { flyTo(lot); select(lot); }
-  else if (switching && !fitVoted() && matchMedia("(pointer: coarse)").matches) locate(false);   // the voted area; with no votes yet, on phones, where the voter is
-  startLive();
-}
-// The page's own controls, wired once per map visit.
-function wireMap() {
-  const dock = $("[data-dock]"), card = $("[data-card]");
-  const sizes = () => {
-    const bar = $("[data-bar]"), idb = $("[data-join]"), r = document.documentElement.style;
-    r.setProperty("--dock-h", `${dock.offsetHeight}px`);
-    r.setProperty("--bar-h", `${bar.offsetHeight + (idb.hidden ? 0 : idb.offsetHeight + 8) + 18}px`);
-  };
-  new ResizeObserver(sizes).observe(dock); sizes();
-  $("[data-locate]").onclick = () => locate(true);
-  $("[data-bar]").onclick = e => {
-    const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.sq) tapSquare(b.dataset.sq, b);
-    else if (b.hasAttribute("data-view")) cycleView();
-    else if (b.hasAttribute("data-more")) { S.menu = !S.menu; renderMenu(); }
-  };
-  $("[data-join]").onsubmit = async e => {
-    e.preventDefault(); const form = e.currentTarget, raw = $("#m-code").value;
-    if (!normCode(raw)) { shake(form); $("#m-code").focus(); return; }
-    try {
-      const r = await Store.join(raw);
-      myCodes.set(r.map, normCode(raw));
-      if (r.map !== S.map.id) { location.hash = `#/m/${r.map}`; return; }   // a code for another map: go there
-      S.code = normCode(raw); S.member = r.member; S.group = r.label;
-      await refresh(); paintAll(); renderId(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList();
-      $("#m-code").blur();
-    } catch (err) { shake(form); toast(errText(err)); }
-  };
-  // Hold a color: long-press on a phone, double-click on a computer.
-  const bar = $("[data-bar]"); let press = null, mouse = true;
-  bar.addEventListener("pointerdown", e => {
-    mouse = e.pointerType === "mouse";
-    const b = e.target.closest("[data-sq]"); if (!b || mouse) return;
-    press = { b, t: setTimeout(() => { press.done = true; holdChoice(b.dataset.sq, b); }, 450), x: e.clientX, y: e.clientY };
-  });
-  const cancel = () => { if (press && !press.done) clearTimeout(press.t); };
-  bar.addEventListener("pointermove", e => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancel(); });
-  bar.addEventListener("pointerup", cancel); bar.addEventListener("pointercancel", cancel);
-  bar.addEventListener("click", e => { if (press?.done) { e.stopImmediatePropagation(); e.preventDefault(); } press = null; }, true);   // the tap that ends a long-press isn't a vote
-  bar.addEventListener("click", e => { if (mouse && e.detail > 1 && e.target.closest("[data-sq]")) e.stopImmediatePropagation(); }, true);  // the second click of a double-click isn't a vote
-  bar.addEventListener("dblclick", e => { const b = e.target.closest("[data-sq]"); if (b && mouse) holdChoice(b.dataset.sq, b); });
-  bar.addEventListener("contextmenu", e => { if (e.target.closest("[data-sq]")) e.preventDefault(); });
-  // Swipe the card down to let go of the lot; swipe left for the next lot nearby.
-  let sw = null;
-  card.addEventListener("touchstart", e => { const t = e.touches[0]; sw = { x: t.clientX, y: t.clientY, top: card.scrollTop }; }, { passive: true });
-  card.addEventListener("touchmove", e => {
-    if (!sw || isWide()) return; const t = e.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
-    if (sw.top <= 0 && dy > 0 && dy > Math.abs(dx)) card.style.transform = `translateY(${dy}px)`;
-    else if (dx < 0 && -dx > Math.abs(dy)) card.style.transform = `translateX(${dx / 2}px)`;
-  }, { passive: true });
-  card.addEventListener("touchend", e => {
-    if (!sw) return; const t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, top = sw.top; sw = null;
-    card.style.transition = "transform .18s"; card.style.transform = ""; setTimeout(() => card.style.transition = "", 200);
-    if (isWide()) return;
-    if (top <= 0 && dy > 60 && dy > Math.abs(dx) * 1.4) closeLot();
-    else if (dx < -60 && -dx > Math.abs(dy) * 1.4) nextNearby();
-  }, { passive: true });
-}
-document.addEventListener("pointerdown", e => { if (S.menu && !e.target.closest("[data-menu],[data-more]")) { S.menu = false; renderMenu(); } });
-document.addEventListener("keydown", e => {
-  if (!document.body.classList.contains("on-map") || e.target.closest("input,select,textarea")) return;
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === "Escape") { if (S.menu) { S.menu = false; renderMenu(); } else { closeLot(); setLock(null); } }
-  else if ((e.key === "ArrowRight" || e.key.toLowerCase() === "n") && S.sel) nextNearby();
-  else if (/^[1-9]$/.test(e.key) && S.sel && S.A[+e.key - 1]) voteKey(S.A[+e.key - 1].key);
-});
-let resizeT = 0;
-window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.body.classList.contains("on-map") && S.sel) { renderCard(); keepInView(S.sel); } }, 150); });
-
-// Other people's votes: picked up every few seconds while a map is open and on screen, never while your own taps are being saved.
-let liveTimer = 0, liveBusy = false;
-function startLive() {
-  clearInterval(liveTimer); if (PROTOTYPE) return;
-  liveTimer = setInterval(async () => {
-    if (document.hidden || liveBusy || pending.size || inflight || !S.map || !document.body.classList.contains("on-map")) return;
-    liveBusy = true;
-    try { if (!(await refresh(true))) return; paintAll(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList(); }
-    catch {} finally { liveBusy = false; }
-  }, CONFIG.refreshSeconds * 1000);
-}
-// ifIdle: drop what came back if taps were made meanwhile, so it never overwrites a vote not yet saved.
-async function refresh(ifIdle = false) {
-  const id = S.map.id, code = S.code;
-  const [t, mine, m, lead] = await Promise.all([Store.tally(id), code ? Store.mine(code) : new Map(), Store.map(id), S.map.leader_member ? Store.leader(id) : []]);
-  if (S.map?.id !== id || S.code !== code) return false;
-  if (ifIdle && (pending.size || inflight)) return false;
-  S.tally = t; S.mine = mine; S.map = m; S.budgets = budgetsOf(m);
-  S.leader = new Map(lead.map(([p, c, n]) => [p, { choice: c, note: n }]));
-  S.totals = m.kind === "land_bank" ? CHOICES.map(c => m.by?.[c.key] || 0) : [m.votes];
-  if (mine.size) markVoted();
-  setMax(); return true;
-}
-// Agreement: the leading answer's votes on a lot, in five steps relative to the lot where most members agree.
-function setMax() { S.max = 0; for (const n of S.tally.values()) S.max = Math.max(S.max, Math.max(...n)); }
-const counts = id => S.tally.get(id) || S.zero;
-const level = id => { const n = counts(id); return sum(n) ? Math.max(1, Math.ceil(5 * Math.max(...n) / (S.max || 1))) : 0; };
-// The leading answer: a key, "tie", or null with no votes.
-function leadingOf(n, A) { const t = sum(n); if (!t) return null; const top = Math.max(...n); return n.filter(x => x === top).length > 1 ? "tie" : A[n.indexOf(top)].key; }
-const leading = n => leadingOf(n, S.A);
-const colorOf = id => { const l = leading(counts(id)), c = level(id); return !l ? "#FFFFFF" : (l === "tie" ? TIE : S.AK[l].ramp)[c - 1]; };
-const used = k => { let n = 0; for (const c of S.mine.values()) if (c === k) n++; return n; };
-const left = k => Math.max(0, (S.budgets[k] || 0) - used(k));
-const isLeader = () => !!S.code && S.member != null && S.member === S.map?.leader_member;
-const leaderName = () => S.map?.leader || "Leader";
-
-/* --- the bar: a square per answer (votes left), whose votes, and ⋯ --- */
-function buildBar() {
-  const el = $("[data-bar]"); if (!el) return;
-  el.innerHTML = S.A.map(a => `<button class="sq" data-sq="${a.key}" style="--c:${a.ramp[3]}"><span class="n"></span></button>`).join("")
-    + `<button class="ib" data-view></button><button class="ib" data-more aria-label="More" aria-haspopup="true" aria-expanded="false">${ICON.more}</button>`;
-  updateBar(true);
-}
-function updateBar(first) {
-  const el = $("[data-bar]"); if (!el) return;
-  const id = S.sel, cur = id ? S.mine.get(id) : null;
-  el.classList.toggle("lit", !!id || !!S.lock);
-  for (const b of $$("[data-sq]", el)) {
-    b.classList.toggle("lock", S.lock === b.dataset.sq);
-    const a = S.AK[b.dataset.sq], n = S.code ? left(a.key) : (S.budgets[a.key] || 0), nEl = $(".n", b), old = nEl.textContent === "" ? null : +nEl.textContent;
-    b.classList.toggle("cur", cur === a.key);
-    b.setAttribute("aria-pressed", String(cur === a.key));
-    b.setAttribute("aria-label", `${a.key === "yes" ? S.map.question : a.label}: ${n} left`);
-    b.title = a.key === "yes" ? S.map.question : a.label;
-    b.disabled = false; b.tabIndex = id ? 0 : -1;
-    if (old !== n) {
-      nEl.textContent = n;
-      if (!first && old !== null && !calm()) { nEl.classList.remove("up", "down"); void nEl.offsetWidth; nEl.classList.add(n < old ? "down" : "up"); }
-    }
-  }
-  const v = $("[data-view]", el), vs = views(), next = vs[(vs.indexOf(S.view) + 1) % vs.length];
-  v.innerHTML = ICON[S.view];
-  v.setAttribute("aria-label", `${viewName(S.view)}. Show ${viewName(next)}`);
-  v.title = viewName(S.view);
-}
-// Views: Mine → Leader → Everyone (Leader only on maps that have one). A short label on switching, then nothing.
-const views = () => S.map?.leader_member ? ["mine", "leader", "everyone"] : ["mine", "everyone"];
-const viewName = v => v === "mine" ? "Your votes" : v === "leader" ? leaderName() : "Everyone";
-function cycleView() {
-  const vs = views(); S.view = vs[(vs.indexOf(S.view) + 1) % vs.length];
-  applyView(); updateBar(); hintPill(viewName(S.view), 1000);
-}
-function tapSquare(key, b) {
-  if (S.lock && S.lock === key) return setLock(null);   // tapping the held color lets go of it
-  voteKey(key, b);
-}
-// Vote the selected lot with this answer: same answer takes it back, another moves it, none left shakes.
-function voteKey(key, b = $(`[data-sq="${key}"]`)) {
-  const id = S.sel; if (!id) return;   // no lot selected: the squares are the key
-  if (!S.code) { const f = $("[data-join]"); shake(f); $("#m-code")?.focus(); return; }
-  const cur = S.mine.get(id) || null;
-  if (cur === key) { setChoice(id, null); feedback(id, null); return; }   // same color: take it back
-  if (left(key) <= 0) { shake(b); return; }                                // none left of that color
-  setChoice(id, key); feedback(id, key); markVoted();                      // new vote, or moved from another color
-  if (S.lock && left(S.lock) <= 0) { const k = S.lock; setLock(null); shake($(`[data-sq="${k}"]`)); }   // held color used up: let go
-}
-// Hold a color (long-press / double-click): every lot tapped then gets it.
-function holdChoice(key, b) {
-  if (!S.code) { shake($("[data-join]")); $("#m-code")?.focus(); return; }
-  if (S.lock === key) return setLock(null);
-  if (left(key) <= 0) return shake(b);
-  setLock(key); try { navigator.vibrate?.(15); } catch {}
-}
-function setLock(key) { S.lock = key || null; updateBar(); }
-// A lot tapped while a color is held gets that color; if it already has it, the vote comes back.
-function tapWithLock(id) {
-  const k = S.lock, cur = S.mine.get(id) || null;
-  if (cur === k) { setChoice(id, null); feedback(id, null); return; }
-  if (left(k) <= 0) { setLock(null); shake($(`[data-sq="${k}"]`)); return; }
-  setChoice(id, k); feedback(id, k); markVoted();
-  if (left(k) <= 0) { setLock(null); shake($(`[data-sq="${k}"]`)); }
-}
-function feedback(id, key) {
-  try { navigator.vibrate?.(10); } catch {}
-  flashLot(id, key);
-}
-
-/* --- the identity bar: only until this device has an invite code for the map --- */
-function renderId() {
-  const f = $("[data-join]"); if (!f) return;
-  f.hidden = !!S.code;
-}
-
-/* --- the ⋯ menu: the map's question and terms, the list, About, download, sign out --- */
-function renderMenu() {
-  const el = $("[data-menu]"); if (!el) return;
-  el.hidden = !S.menu; $("[data-more]")?.setAttribute("aria-expanded", String(!!S.menu)); $("[data-dock]")?.classList.toggle("menu-open", !!S.menu);
-  if (!S.menu) return;
-  const m = S.map, votes = sum(S.totals);
-  const terms = [m.steward ? esc(m.steward) : "", `${esc(budgetText(m))} each`, m.onsite ? "votes count only at the lot" : ""].filter(Boolean).join(" · ");
-  el.innerHTML = `<div class="mi"><b>${esc(m.question)}</b><div class="muted">${terms}</div>
-      <div class="muted">${fmt(m.used)} of ${plural(m.issued, "member", "members")} voted · ${plural(votes, "vote", "votes")} on ${plural(S.tally.size, "lot", "lots")}</div>
-      ${S.A.length > 1 ? `<div class="mk">${S.A.map(a => `<span><i class="sw" style="background:${a.ramp[3]}"></i>${esc(a.label)}</span>`).join("")}<span><i class="sw" style="background:${TIE[3]}"></i>Tie</span></div>` : ""}</div>
-    <button class="mrow" data-mode>${S.mode === "list" ? "Show the map" : "List of lots"}</button>
-    <a class="mrow" href="#/m/${m.id}/about">About this map</a>
-    <button class="mrow" data-dl>Download votes</button>
-    <a class="mrow" href="#/">All maps</a>
-    ${S.code ? `<div class="mrow who"><span>Member ${S.member}${S.group ? ` · ${esc(S.group)}` : ""}</span><button class="link quiet" data-leave>Sign out</button></div>` : ""}`;
-  $("[data-mode]", el).onclick = () => { S.mode = S.mode === "list" ? "map" : "list"; if (S.mode === "list") closeLot(); S.menu = false; renderMenu(); applyView(); };
-  $("[data-dl]", el).onclick = () => { S.menu = false; renderMenu(); downloadVotes(m.id); };
-  $("[data-leave]", el)?.addEventListener("click", () => {
-    flushAll(); myCodes.del(S.map.id); S.code = S.member = S.group = null; S.mine = new Map(); S.menu = false;
-    paintAll(); applyView(); renderMenu(); renderId(); updateBar(); renderCard();
-  });
-}
-
-/* --- the card: the selected lot --- */
-function renderCard(fresh) {
-  const el = $("[data-card]"); if (!el) return;
-  const id = S.sel; el.hidden = !id || S.mode === "list";
-  if (el.hidden) return;
-  if (!fresh && el.dataset.lot === id && document.activeElement?.matches?.("[data-note]")) return;   // don't wipe a note being typed
-  el.dataset.lot = id;
-  const p = S.byId.get(id).properties, addr = parseAddress(p.city?.[CONFIG.addressField])?.full;
-  const cur = S.mine.get(id), n = counts(id), wide = isWide(), open = wide || S.more;
-  const near = addr ? p.d : (/^Parcel /.test(p.a) ? "" : p.a);
-  const val = v => v === null || v === undefined || String(v).trim() === "" ? null : typeof v === "number" ? fmt(v) : String(v);
-  // Who says what: City · Leader · You, each in its answer's color; nothing for a source with no answer here.
-  const city = cityPick(p), lead = S.map.leader_member ? S.leader.get(id) : null, me = isLeader();
-  const chip = (who, key, cls = "") => `<span class="who ${cls}" style="--c:${S.AK[key].ramp[3]}" title="${esc(`${who}: ${answerName(S.AK[key])}`)}">${esc(who)}</span>`;
-  const chips = [city && S.AK[city] ? chip("City", city) : "", lead && S.AK[lead.choice] ? chip(leaderName(), lead.choice, "ld") : "", cur && !me ? chip("You", cur) : ""].join("");
-  const note = lead?.note || "";
-  if (fresh && !calm()) { el.classList.remove("in"); void el.offsetWidth; el.classList.add("in"); }
-  el.innerHTML = `<div class="ch"><div class="ct"><b>${esc(addr || p.d)}</b>
-      <div class="cr">${chips}${!cur && !votedOnce ? `<span class="tip">Tap a color to vote.</span>` : ""}
-        <span class="sp"></span>${wide ? "" : `<button class="link quiet" data-moreinfo aria-expanded="${open}">${open ? "Less" : "More"}</button>`}</div></div>
-      <button class="nx" data-next aria-label="Next lot nearby" title="Next lot nearby">${ICON.next}</button></div>
-    ${open ? `<div class="cx">
-      ${near ? `<div class="pin">${esc(near)}</div>` : ""}
-      ${me && cur ? `<input class="note-in" data-note maxlength="80" placeholder="Why? (optional)" aria-label="Note on this lot" value="${esc(note)}">`
-        : note ? `<div class="lnote">${esc(note)}</div>` : ""}
-      <table class="tl"><tbody>${S.A.map((a, i) => `<tr class="${cur === a.key ? "me" : ""}"><td><i class="sw" style="background:${a.ramp[3]}"></i>${esc(a.key === "yes" ? "Votes" : a.label)}</td><td class="num">${fmt(n[i])}</td></tr>`).join("")}</tbody></table>
-      <h3>City record</h3><dl class="city">${S.fields.map(f => { const v = val(p.city[f.name]); return `<dt>${esc(f.alias)}</dt><dd class="${v === null ? "blank" : ""}">${v === null ? "Blank" : esc(v)}</dd>`; }).join("")}</dl>
-      ${S.others.length ? `<h3>On other maps</h3><div class="others">${S.others.map(o => `<a href="#/m/${o.id}?lot=${id}">${otherLine(o)} <span class="on">→</span></a>`).join("")}</div>` : ""}
-    </div>` : ""}`;
-  $("[data-next]", el).onclick = () => nextNearby();
-  $("[data-moreinfo]", el)?.addEventListener("click", () => { S.more = !S.more; renderCard(); keepInView(id); });
-  const ni = $("[data-note]", el);
-  if (ni) {
-    ni.addEventListener("keydown", e => { if (e.key === "Enter") ni.blur(); if (e.key === "Escape") { ni.value = note; ni.blur(); } e.stopPropagation(); });
-    ni.addEventListener("change", () => saveNote(id, ni.value));
-  }
-}
-// The leader's note on a lot: saved after the lot's vote is.
-function saveNote(id, text) {
-  const t = String(text || "").trim().slice(0, 80), cur = S.leader.get(id); if (!cur || (cur.note || "") === t) return;
-  cur.note = t || null; const code = S.code;
-  flush(id);
-  inflight++;   // keeps the live refresh from bringing back the old note meanwhile
-  (chains.get(id) || Promise.resolve()).then(() => Store.setNote(code, id, t)).catch(e => toast(errText(e))).finally(() => { inflight--; settle(); });
-}
-// The city's recommended use for a lot, as an answer key: only on land bank maps, only if the city publishes one.
-function cityPick(p) {
-  if (S.A.length < 2) return null;
-  if (S.recField === undefined) {
-    const f = CONFIG.cityRecommendation.field;
-    S.recField = f ? (S.fields.some(x => x.name === f) ? f : null) : (S.fields.find(x => /recommend/i.test(`${x.name} ${x.alias}`))?.name || null);
-  }
-  if (!S.recField) return null;
-  const v = String(p.city?.[S.recField] ?? "").trim().toLowerCase(); if (!v) return null;
-  return CONFIG.cityRecommendation.values[v] || CHOICES.find(c => c.key === v || c.label.toLowerCase() === v)?.key || null;
-}
-// "Ward 7 office · Development 3 · Open space 1" for a land bank map; the question and its votes for a question map.
-function otherLine(o) {
-  if (o.kind === "land_bank") {
-    const parts = CHOICES.map(c => [c, o.by?.[c.key] || 0]).filter(([, n]) => n).sort((a, b) => b[1] - a[1]);
-    return `<span class="oq">${esc(o.steward || o.question)}</span> <span class="on">· ${parts.map(([c, n]) => `${esc(c.label)} ${fmt(n)}`).join(" · ")}</span>`;
-  }
-  return `<span class="oq">${esc(o.question)}</span> <span class="on">· ${plural(o.votes, "vote", "votes")}${o.steward ? ` · ${esc(o.steward)}` : ""}</span>`;
-}
-let pillT = 0;
-function hintPill(text, ms = 1400) {
-  const el = $("[data-zhint]"); if (!el) return; clearTimeout(pillT);
-  if (!text) { el.classList.remove("show"); return; }
-  el.textContent = text; el.classList.add("show");
-  if (ms) pillT = setTimeout(() => el.classList.remove("show"), ms);
-}
-
-/* --- votes: shown at once, saved once the taps on that lot stop (three quick taps, one write) --- */
-const pending = new Map();   // lot -> { from, to, timer, code, map, onsite }
-const chains = new Map();    // lot -> the save in flight, so saves on one lot go out in order
-let inflight = 0;
-function setChoice(id, to) {
-  const cur = S.mine.get(id) || null, n = [...counts(id)];
-  if (cur) { n[S.AK[cur].i]--; S.totals[S.AK[cur].i]--; }
-  if (to) { n[S.AK[to].i]++; S.totals[S.AK[to].i]++; }
-  sum(n) ? S.tally.set(id, n) : S.tally.delete(id);
-  to ? S.mine.set(id, to) : S.mine.delete(id);
-  if (isLeader()) to ? S.leader.set(id, { choice: to, note: S.leader.get(id)?.note || null }) : S.leader.delete(id);
-  setMax();
-  const p = pending.get(id) || { from: cur, code: S.code, map: S.map.id, onsite: S.map.onsite };
-  clearTimeout(p.timer); p.to = to; p.timer = setTimeout(() => flush(id), CONFIG.saveDelay);
-  pending.set(id, p);
-  paintAll(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList();
-}
-function flush(id) {
-  const p = pending.get(id); if (!p) return;
-  clearTimeout(p.timer); pending.delete(id);
-  if (p.to === p.from) return settle();
-  inflight++;
-  const run = (chains.get(id) || Promise.resolve()).then(() => save(id, p))
-    .catch(e => { if (S.map?.id === p.map) toast(errText(e), 6000); })
-    .finally(() => { inflight--; if (chains.get(id) === run) chains.delete(id); settle(); });
-  chains.set(id, run);
-}
-async function save(id, p) {
-  if (!p.to) return Store.unvote(p.code, id);
-  let onsite = null;
-  if (p.onsite) {   // on-site maps: check where the voter is now, and keep only yes or no
-    const lot = S.byId.get(id).properties, d = metersBetween(await position(true), [lot.cx, lot.cy]);
-    onsite = d <= CONFIG.onsiteMeters;
-    if (!onsite) throw new Error(`You're ${d < 1000 ? fmt(Math.round(d)) + " m" : (d / 1000).toFixed(1) + " km"} from this lot. This map counts votes only within ${CONFIG.onsiteMeters} m.`);
-  }
-  return Store.vote(p.code, id, p.to, onsite);
-}
-function flushAll() { for (const id of [...pending.keys()]) flush(id); }
-async function settle() {   // once every tap is saved, read the record back
-  if (pending.size || inflight || !S.map) return;
-  try { if (!(await refresh(true))) return; } catch (e) { toast(errText(e)); }
-  if (!document.body.classList.contains("on-map")) return;
-  paintAll(); updateBar(); renderCard(); renderMenu(); if (S.mode === "list") renderList();
-}
-document.addEventListener("visibilitychange", () => { if (document.hidden) flushAll(); });
-window.addEventListener("pagehide", flushAll);
-
-/* --- selecting lots --- */
-async function select(id) {
-  if (S.sel && S.sel !== id) setSel(S.sel, false);
-  const fresh = !S.sel;
-  S.sel = id; S.others = []; setSel(id, true);
-  if (S.menu) { S.menu = false; renderMenu(); }
-  renderCard(fresh); updateBar(); keepInView(id);
-  let others = []; try { others = (await Store.lotMaps(id)).filter(o => o.id !== S.map.id); } catch {}
-  if (S.sel === id) { S.others = others; if (others.length) renderCard(); }
-}
-function closeLot() { if (!S.sel) return; setSel(S.sel, false); S.sel = null; S.more = false; S.others = []; renderCard(); updateBar(); }
-// The closest lot you haven't voted on (and haven't stepped past with this button).
-function nextNearby() {
-  if (!S.sel) return;
-  const from = S.byId.get(S.sel).properties, kx = Math.cos(from.cy * Math.PI / 180);
-  S.skipped.add(S.sel);
-  let best = null, bd = Infinity;
-  for (const f of S.fc.features) {
-    const p = f.properties; if (S.mine.has(p.id) || S.skipped.has(p.id)) continue;
-    const d = ((p.cx - from.cx) * kx) ** 2 + (p.cy - from.cy) ** 2; if (d < bd) { bd = d; best = p.id; }
-  }
-  if (!best) return shake($("[data-next]"));
-  select(best);
-}
-function position(fresh) {   // fresh: on-site votes need where the voter is now, not a minute ago
-  return new Promise((ok, no) => {
-    if (!navigator.geolocation) return no(new Error("This browser can't share its location."));
-    navigator.geolocation.getCurrentPosition(p => { S.me = [p.coords.longitude, p.coords.latitude]; showMe(); ok(S.me); },
-      e => no(new Error(e.code === 1 ? "Location is turned off for this page. Turn it on to vote on this map." : "Couldn't find where you are. Try again outside or near a window.")),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: fresh ? 0 : 10000 });
-  });
-}
-async function locate(loud) {
-  try { const me = await position(); gl.flyTo({ center: me, zoom: Math.max(gl.getZoom(), 16.5), duration: 900 }); }
-  catch (e) { if (loud) toast(e.message); }
-}
-
-/* --- list view (under ⋯): every lot, including the ones without addresses --- */
-function renderList() {
-  const el = $("[data-list]"); if (!el) return;
-  el.hidden = S.mode !== "list"; const loc = $("[data-locate]"); if (loc) loc.hidden = !el.hidden;
-  if (el.hidden) return;
-  const q = S.listQuery.trim().toLowerCase(), qn = normId(q);
-  let ids = S.ids;
-  if (S.view === "mine") ids = ids.filter(id => S.mine.has(id));
-  if (S.view === "leader") ids = ids.filter(id => S.leader.has(id));
-  if (q) ids = ids.filter(id => { const p = S.byId.get(id).properties; return p.a.toLowerCase().includes(q) || (qn && p.id.includes(qn)); });
-  const az = (a, b) => S.byId.get(a).properties.a.localeCompare(S.byId.get(b).properties.a, undefined, { numeric: true });
-  const lb = S.A.length > 1, opts = [["votes", "Most votes"], ...(lb ? S.A.map(a => [a.key, `Most ${lower(a.key)}`]) : []), ["az", "A to Z"]];
-  if (!opts.some(([v]) => v === S.listSort)) S.listSort = "votes";
-  const ci = S.AK[S.listSort] && lb ? S.AK[S.listSort].i : -1;
-  const by = S.listSort === "az" ? az : ci >= 0 ? (a, b) => counts(b)[ci] - counts(a)[ci] || az(a, b) : (a, b) => sum(counts(b)) - sum(counts(a)) || az(a, b);
-  const sorted = [...ids].sort(by), shown = sorted.slice(0, CONFIG.listLimit);
-  const keep = document.activeElement?.id === "l-q";
-  el.innerHTML = `<div class="list-inner"><div class="bar"><label class="sr" for="l-q">Search lots</label><input class="text" id="l-q" placeholder="Street, address, or parcel number" value="${esc(S.listQuery)}" autocomplete="off">
-      <select id="l-s" aria-label="Sort">${opts.map(([v, t]) => `<option value="${v}" ${S.listSort === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
-    ${shown.map(id => { const p = S.byId.get(id).properties, n = counts(id), t = sum(n), col = colorOf(id), dark = level(id) >= 4, mine = S.mine.get(id);
-      return `<button class="lot" data-lot="${id}"><div><div class="ll">${esc(p.a)}</div><div class="lp">${esc(p.d)}${mine ? ` · <b style="color:var(--ink)">${lb ? `You: ${esc(lower(mine))}` : "Your vote"}</b>` : ""}</div></div>
-        <span class="chip" style="background:${col};color:${dark ? "#fff" : "var(--ink)"}" title="${esc(S.A.map((a, i) => `${a.label} ${n[i]}`).join(", "))}">${fmt(t)}</span></button>`; }).join("")}
-    <div class="more">${sorted.length ? `${fmt(shown.length)} of ${plural(sorted.length, "lot", "lots")}${sorted.length > shown.length ? ". Search to narrow it down." : ""}` : S.view === "mine" ? "You haven't voted on this map yet." : S.view === "leader" ? "No leader votes yet." : "No lots match."}</div></div>`;
-  const qi = $("#l-q", el); qi.oninput = () => { S.listQuery = qi.value; renderList(); };
-  if (keep) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
-  $("#l-s", el).onchange = e => { S.listSort = e.target.value; renderList(); };
-  $$("[data-lot]", el).forEach(b => b.onclick = () => { const id = b.dataset.lot; S.mode = "map"; applyView(); flyTo(id); select(id); });
-}
-
-/* --- drawing the map --- */
-// Feature state per lot: k = leading answer (1-3, 9 tie, 0 none), c = agreement (0-5), m = your answer (1-3, 0 none), s = selected.
-const painted = new Map();   // l = the leader's answer (1-3, 0 none)
-function fsSet(id, st) { gl.setFeatureState({ source: "parcels", id }, st); gl.setFeatureState({ source: "pts", id }, st); }
-function paint(id) {
-  const l = leading(counts(id)), k = !l ? 0 : l === "tie" ? 9 : S.AK[l].i + 1, c = level(id), mine = S.mine.get(id), m = mine && S.AK[mine] ? S.AK[mine].i + 1 : 0;
-  const ld = S.leader.get(id)?.choice, ll = ld && S.AK[ld] ? S.AK[ld].i + 1 : 0, key = ll * 1000 + k * 100 + c * 10 + m;
-  if (painted.get(id) !== key) { painted.set(id, key); fsSet(id, { k, c, m, l: ll }); }
-}
-function paintAll() { if (gl) for (const id of S.ids) paint(id); }
-function setSel(id, on) { if (gl) fsSet(id, { s: on }); }
-// Mine: your lots solid in your color, the rest bare outlines. Leader: the same for the leader's lots, with a dashed edge.
-// Everyone: the leading answer's color, stronger where more members agree.
-const AGREE = [0.4, 0.55, 0.7, 0.82, 0.92];
-function applyView() {
-  if (!gl) return renderList();
-  const k = ["coalesce", ["feature-state", "k"], 0], c = ["coalesce", ["feature-state", "c"], 0], m = ["coalesce", ["feature-state", "m"], 0];
-  const l = ["coalesce", ["feature-state", "l"], 0], own = S.view === "mine" ? m : S.view === "leader" ? l : null, mineView = !!own;
-  const fill = mineView ? ["match", own, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), "#FFFFFF"]
-    : ["match", k, ...S.A.flatMap((a, i) => [i + 1, a.ramp[3]]), 9, TIE[3], "#FFFFFF"];
-  const op = mineView ? ["match", own, 0, 0, 0.92] : ["match", c, 0, CONFIG.emptyOpacity, ...AGREE.slice(0, 4).flatMap((o, i) => [i + 1, o]), AGREE[4]];
-  const has = mineView ? [">", own, 0] : [">", c, 0];
-  gl.setPaintProperty("lead-line", "line-opacity", S.view === "leader" ? ["case", [">", l, 0], 0.95, 0] : 0);
-  gl.setPaintProperty("lots-fill", "fill-color", fill); gl.setPaintProperty("lots-fill", "fill-opacity", op);
-  gl.setPaintProperty("lots-case", "line-opacity", mineView ? 0.28 : 0.45);
-  gl.setPaintProperty("lots-line", "line-opacity", mineView ? 0.75 : 0.9);
-  gl.setPaintProperty("lots-dots", "circle-color", fill);
-  gl.setPaintProperty("lots-dots", "circle-radius", ["interpolate", ["linear"], ["zoom"], 10, ["case", has, 3, 1.6], 14, ["case", has, 4.6, 2.8]]);
-  gl.setPaintProperty("lots-dots", "circle-opacity", ["interpolate", ["linear"], ["zoom"], 13.6, mineView ? ["case", has, 1, 0] : ["case", has, ["match", c, ...AGREE.flatMap((o, i) => [i + 1, Math.min(1, o + 0.1)]), 1], 1], 14.6, 0]);
-  renderList();
-}
-// A vote landing: the lot flashes in the vote's color and a ring spreads from it.
-let flashRaf = 0;
-function flashLot(id, key) {
-  if (!gl || calm() || !gl.getSource("flash")) return;
-  const f = S.byId.get(id); if (!f) return;
-  gl.getSource("flash").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: f.geometry }] });
-  const col = key ? S.AK[key].ramp[3] : "#FFFFFF";
-  gl.setPaintProperty("flash-fill", "fill-color", col); gl.setPaintProperty("flash-ring", "line-color", col);
-  cancelAnimationFrame(flashRaf);
-  const t0 = performance.now(), D = 560;
-  const step = now => {
-    const t = Math.max(0, Math.min(1, (now - t0) / D)), e = 1 - (1 - t) ** 3;
-    gl.setPaintProperty("flash-fill", "fill-opacity", (key ? 0.95 : 0.85) * (1 - e));
-    gl.setPaintProperty("flash-ring", "line-width", 2 + 16 * e);
-    gl.setPaintProperty("flash-ring", "line-opacity", 0.9 * (1 - t));
-    if (t < 1) flashRaf = requestAnimationFrame(step);
-  };
-  flashRaf = requestAnimationFrame(step);
-}
-async function loadLabels() {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
-  try { const r = await fetch(CONFIG.labels, { signal: ctl.signal }); if (!r.ok) return null; const s = await r.json(); return s && s.version === 8 && Array.isArray(s.layers) ? s : null; }
-  catch { return null; } finally { clearTimeout(t); }
-}
-let labelsP = null;
-async function ensureMap() {
-  if (gl) return;
-  const lab = await (labelsP ||= loadLabels());
-  const c = ["coalesce", ["feature-state", "c"], 0], s = ["boolean", ["feature-state", "s"], false];
-  const none = { duration: 0 };
-  const sources = {
-    photo: { type: "raster", tiles: [CONFIG.imagery], tileSize: 256, maxzoom: 19, attribution: CONFIG.imageryAttribution },
-    parcels: { type: "geojson", data: S.fc, promoteId: "id", tolerance: 0.2 },
-    pts: { type: "geojson", promoteId: "id", data: { type: "FeatureCollection", features: S.fc.features.map(f => ({ type: "Feature", properties: { id: f.properties.id }, geometry: { type: "Point", coordinates: [f.properties.cx, f.properties.cy] } })) } },
-    flash: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
-    me: { type: "geojson", data: { type: "FeatureCollection", features: [] } }
-  };
-  const layers = [
-    { id: "paper", type: "background", paint: { "background-color": "#FFFFFF" } },
-    { id: "photo", type: "raster", source: "photo", paint: { "raster-opacity": CONFIG.imageryOpacity, "raster-saturation": -0.3 } },
-    { id: "lots-fill", type: "fill", source: "parcels", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0, "fill-opacity-transition": { duration: 200 } } },
-    { id: "lots-case", type: "line", source: "parcels", paint: { "line-color": "#4A4850", "line-opacity": 0.45, "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.6, 15, 1.4, 18, 2.8] } },
-    { id: "lots-line", type: "line", source: "parcels", paint: { "line-color": "#FFFFFF", "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.3, 15, 0.8, 18, 1.6] } },
-    { id: "lots-dots", type: "circle", source: "pts", maxzoom: 15, paint: {
-        "circle-color": "#FFFFFF", "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["case", [">", c, 0], 3, 1.6], 14, ["case", [">", c, 0], 4.6, 2.8]],
-        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0], "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 13.6, 1, 14.6, 0],
-        "circle-stroke-color": "#6F6C74", "circle-stroke-width": 0.6 } },
-    { id: "lead-line", type: "line", source: "parcels", minzoom: 13, paint: { "line-color": "#1D1A26", "line-opacity": 0, "line-dasharray": [1.6, 1.2],
-        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1, 16, 1.8, 18, 2.4] } },
-    { id: "flash-fill", type: "fill", source: "flash", paint: { "fill-color": "#FFFFFF", "fill-opacity": 0, "fill-opacity-transition": none, "fill-color-transition": none } },
-    { id: "flash-ring", type: "line", source: "flash", paint: { "line-color": "#FFFFFF", "line-opacity": 0, "line-width": 2, "line-blur": 2, "line-opacity-transition": none, "line-width-transition": none, "line-color-transition": none } },
-    { id: "sel-halo", type: "line", source: "parcels", paint: { "line-color": "#FFFFFF", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 16, 6.5, 18, 8] } },
-    { id: "sel-line", type: "line", source: "parcels", paint: { "line-color": "#D6336C", "line-opacity": ["case", s, 1, 0], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 16, 3.5, 18, 4.5] } },
-    { id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 14, "circle-color": "#2F6FEB", "circle-opacity": 0.18 } },
-    { id: "me-dot", type: "circle", source: "me", paint: { "circle-radius": 6, "circle-color": "#2F6FEB", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } }
-  ];
-  // Only the street names from the vector basemap, on top of everything, so the photo stays readable.
-  const style = { version: 8, sources, layers };
-  if (lab) {
-    for (const [k, v] of Object.entries(lab.sources || {})) style.sources[k] = v;
-    style.glyphs = lab.glyphs; style.sprite = lab.sprite;
-    style.layers.push(...lab.layers.filter(l => l.type === "symbol"));
-  }
-  $("#map").hidden = false;
-  gl = new maplibregl.Map({ container: "map", style, bounds: bbox(), fitBoundsOptions: { padding: 40 }, attributionControl: false, dragRotate: false, pitchWithRotate: false, maxZoom: 19.5 });
-  gl.addControl(new maplibregl.AttributionControl({ compact: true }), "top-left");
-  gl.once("idle", () => $(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));   // credits folded behind the (i)
-  gl.touchZoomRotate.disableRotation();
-  gl.on("error", e => console.warn("Map:", e.error?.message || e));
-  gl.on("click", e => {
-    // the lot right under the finger first; a few pixels around it only if that misses (small lots, zoomed out)
-    const exact = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill"] });
-    const f = exact.length ? exact : gl.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ["lots-fill", "lots-dots"] });
-    const hit = f.find(x => x.layer.id === "lots-fill") || f[0];
-    if (!hit) return closeLot();
-    if (gl.getZoom() < CONFIG.selectZoom) {   // too far out to pick one lot: zoom in on the tap instead
-      closeLot(); gl.easeTo({ center: e.lngLat, zoom: CONFIG.selectZoom + 1.5, duration: calm() ? 0 : 500 });
-      return hintPill("Zoom in to vote");
-    }
-    const id = hit.id ?? normId(hit.properties.id);
-    select(id);
-    if (S.lock && S.code) tapWithLock(id);
-  });
-  gl.on("mousemove", e => { const f = gl.queryRenderedFeatures(e.point, { layers: ["lots-fill", "lots-dots"] }); gl.getCanvas().style.cursor = f.length && gl.getZoom() >= CONFIG.selectZoom ? "pointer" : ""; });
-  // Feature colors need the lot layers in place; 'load' also waits for every background tile, so don't wait past the style.
-  await new Promise(ok => { if (gl.isStyleLoaded()) return ok(); let done = false; const go = () => { if (!done) { done = true; ok(); } }; gl.once("load", go); gl.once("style.load", go); setTimeout(go, 8000); });
-}
-// Keep the selected lot in view: right of the card on wide screens, above the card and bar on phones.
-function keepInView(id) {
-  if (!gl) return;
-  const p = S.byId.get(id).properties, pt = gl.project([p.cx, p.cy]), W = innerWidth, H = innerHeight, wide = isWide();
-  const card = $("[data-card]"), dockTop = $("[data-dock]")?.getBoundingClientRect().top ?? H;
-  const r = wide ? { left: (card && !card.hidden ? card.getBoundingClientRect().right : 0) + 24, right: W - 70, top: 24, bottom: dockTop - 16 }
-    : { left: 20, right: W - 20, top: 70, bottom: dockTop - 16 };
-  if (pt.x > r.left && pt.x < r.right && pt.y > r.top && pt.y < r.bottom) return;
-  gl.easeTo({ center: [p.cx, p.cy], offset: [(r.left + r.right) / 2 - W / 2, (r.top + r.bottom) / 2 - H / 2], duration: calm() ? 0 : 350 });
-}
-// A map opens on the lots that already have votes: the first votes set the area and the first recommendations
-// for everyone after. A few stray lots far away (the outer 5% each way, once there are 10+) don't stretch it.
-function votedBounds() {
-  const P = [...S.tally.keys()].map(id => S.byId.get(id)?.properties).filter(Boolean);
-  if (!P.length) return null;
-  const xs = P.map(p => p.cx).sort((a, b) => a - b), ys = P.map(p => p.cy).sort((a, b) => a - b), t = P.length >= 10 ? Math.floor(P.length * 0.05) : 0;
-  return [[xs[t], ys[t]], [xs[xs.length - 1 - t], ys[ys.length - 1 - t]]];
-}
-function fitVoted() {
-  const b = votedBounds(); if (!b || !gl) return false;
-  const dock = $("[data-dock]")?.offsetHeight || 90, side = Math.min(40, innerWidth / 10);
-  gl.fitBounds(b, { padding: { top: 70, bottom: Math.min(dock + 24, innerHeight / 2), left: side, right: side }, maxZoom: 17.5, duration: 0 });
-  return true;
-}
-function showMe() { gl?.getSource("me")?.setData({ type: "FeatureCollection", features: S.me ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: S.me } }] : [] }); }
-function flyTo(id) { const p = S.byId.get(id).properties; gl.jumpTo({ center: [p.cx, p.cy], zoom: Math.max(gl.getZoom(), 17) }); }
-function bbox() { let x0 = 180, y0 = 90, x1 = -180, y1 = -90; for (const f of S.fc.features) { const p = f.properties; x0 = Math.min(x0, p.cx); y0 = Math.min(y0, p.cy); x1 = Math.max(x1, p.cx); y1 = Math.max(y1, p.cy); } return [[x0, y0], [x1, y1]]; }
-
-/* --- prototype: sample maps with invented votes, sharing lots so they can be compared --- */
-async function addSamples() {
-  await parcelsReady; if (!S.fc) throw new Error(S.parcelsError || "The city's lots haven't loaded.");
-  let seed = 4242; const rnd = () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const P = S.fc.features.map(f => f.properties), near = (x, y, r) => P.filter(p => Math.abs(p.cx - x) < r && Math.abs(p.cy - y) * 1.33 < r);
-  const hough = near(-81.627, 41.504, 0.012), glenville = near(-81.611, 41.531, 0.012);
-  if (hough.length < 30 || glenville.length < 30) throw new Error("Couldn't find lots for the samples.");
-  const pick = (pool, hot) => (rnd() < 0.5 ? hot[Math.floor(rnd() * hot.length)] : pool[Math.floor(rnd() * pool.length)]).id;
-  const landBank = async (spec, groups, pool) => {
-    const r = await Store.create({ kind: "land_bank", question: LAND_BANK_QUESTION, members: groups[0][1], label: groups[0][0], onsite: false, ...spec });
-    const hot0 = pool.slice(0, 30), notes = ["Next to the community garden", "Neighbors already mow it", "Faces the new homes on this block"];
-    let n = 0;   // the leader's first pass: the hot lots, a few with notes
-    for (const c of CHOICES) for (let i = 0; i < spec.budgets[c.key]; i++) {
-      const id = hot0[n++ % hot0.length].id; try { await Store.vote(r.leaderCode, id, c.key); if (n <= notes.length) await Store.setNote(r.leaderCode, id, notes[n - 1]); } catch {}
-    }
-    let codes = r.codes.slice(0, groups[0][2]);
-    for (const [label, n, voters] of groups.slice(1)) codes = codes.concat((await Store.addCodes(r.map.id, r.key, n, label)).slice(0, voters));
-    const hot = pool.slice(0, 30);
-    for (const code of codes) for (const c of CHOICES) {
-      const picks = new Set(), want = spec.budgets[c.key];
-      while (picks.size < want) picks.add(pick(pool, hot));
-      for (const id of picks) { try { await Store.vote(code, id, c.key); } catch {} }
-    }
-  };
-  await landBank({ steward: "Hough Block Club Network (sample)", leader: "Tim (WRLC)", budgets: { open_space: 5, development: 3, yard_expansion: 2 } },
-    [["Hough training, Oct 12", 30, 20], ["Glenville walk, Oct 19", 15, 8]], [...hough, ...glenville.slice(0, 40)]);
-  await landBank({ steward: "Ward 7 office (sample)", leader: "Ward 7 staff", budgets: { open_space: 3, development: 5, yard_expansion: 2 } },
-    [["Ward 7 staff", 12, 9]], [...hough.slice(0, 80)]);
-  const q = await Store.create({ kind: "question", question: "Where should our block clubs plant trees first?", steward: "East Side Block Clubs (sample)", budget: 3, members: 25, onsite: true, label: "Tree walk, Oct 5" });
-  const pool = [...hough.slice(0, 60), ...glenville], hot = pool.slice(0, 25);
-  for (const code of q.codes.slice(0, 17)) { const picks = new Set(); while (picks.size < 3) picks.add(pick(pool, hot)); for (const id of picks) await Store.vote(code, id, "yes", true); }
-}
-
-/* =====================================================================
-   Start
-   ===================================================================== */
-parcelsReady = loadParcels().then(fc => {
-  S.fc = fc; S.fields = fc.metadata.fields;
-  for (const f of fc.features) S.byId.set(f.properties.id, f);
-  S.ids = [...S.byId.keys()];
-}).catch(e => { S.parcelsError = e.message || String(e); console.error(e); });
-labelsP = loadLabels();
-window.addEventListener("hashchange", route);
-(async () => {
-  if (!window.maplibregl) { $("#app").innerHTML = `<div class="boot"><div><b>The map library didn't load</b>It comes from cdn.jsdelivr.net. Check the internet connection.</div></div>`; return; }
-  if (!PROTOTYPE && !window.supabase) {
-    try { await loadScript(SUPABASE_JS); }
-    catch { $("#app").innerHTML = `<div class="boot"><div><b>The record didn't load</b>Its library comes from cdn.jsdelivr.net. Check the internet connection and reload.</div></div>`; return; }
-  }
-  route();
-})();
-</script>
-</body>
-</html>
