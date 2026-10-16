@@ -32,6 +32,12 @@
 --                One vote per lot per member. Public. The leader's votes can
 --                carry a one-line note (why).
 --   pv_history   every vote, change, and take-back, append-only. Public.
+--   pv_share_log each time a map's leader sent the map to decision-makers
+--                (council, CDC, planner, land bank): when, which offices
+--                (public officials' office and name only, never an email),
+--                and the turnout and top lots at that moment. Append-only
+--                and public. A map with entries can't be deleted, only
+--                closed to voting (pv_maps.closed_at).
 --   pv_sync      where the lots come from and how the last sync went.
 --   pv_attempts  rate limiting by network address.
 -- =====================================================================
@@ -163,6 +169,30 @@ create index if not exists pv_votes_by_member on pv_votes (map_id, member, choic
 alter table pv_maps    add column if not exists leader text check (length(leader) <= 60);
 alter table pv_maps    add column if not exists leader_member int;
 alter table pv_votes   add column if not exists note text check (length(note) <= 80);
+-- Sharing, closing, deleting (Oct 16, 2026). A closed map takes no more votes; everything on it stays public.
+alter table pv_maps    add column if not exists closed_at timestamptz;
+
+-- Each time a leader sent the map to decision-makers. Written only by pv_share (leader code), never changed or removed.
+-- recipients: [{"office": "Ward 7", "name": "Austin N. Davis"}, {"office": "Cleveland Land Bank"}, ...]
+-- top_parcels_at_send: [{"parcel": "10131002", "choice": "open_space" or null, "votes": 6, "total": 7}, ...]
+-- The foreign key has no cascade, so a map with entries can't be deleted.
+create table if not exists pv_share_log (
+  id                  bigint generated always as identity primary key,
+  map_id              text not null references pv_maps(id),
+  sent_at             timestamptz not null default now(),
+  recipients          jsonb not null check (jsonb_typeof(recipients) = 'array'),
+  voters_at_send      int not null,
+  members_at_send     int not null,
+  top_parcels_at_send jsonb not null default '[]'
+);
+create index if not exists pv_share_log_by_map on pv_share_log (map_id, sent_at);
+create or replace function pv_share_log_frozen() returns trigger
+language plpgsql set search_path = public as $$
+begin raise exception 'pv_share_log is append-only'; end $$;
+drop trigger if exists pv_share_log_frozen on pv_share_log;
+create trigger pv_share_log_frozen before update or delete on pv_share_log for each row execute function pv_share_log_frozen();
+drop trigger if exists pv_share_log_frozen_t on pv_share_log;
+create trigger pv_share_log_frozen_t before truncate on pv_share_log for each statement execute function pv_share_log_frozen();
 
 create table if not exists pv_attempts (
   ip   text not null,
@@ -245,6 +275,9 @@ create or replace function pv_map_info(p_id text) returns jsonb
 language sql stable security definer set search_path = public as $$
   select jsonb_build_object('id', m.id, 'kind', m.kind, 'question', m.question, 'steward', m.steward, 'budget', m.budget, 'budgets', m.budgets,
            'onsite', m.onsite, 'created_at', m.created_at, 'leader', m.leader, 'leader_member', m.leader_member,
+           'closed_at', m.closed_at,
+           'shared', (select count(*) from pv_share_log s where s.map_id = m.id),
+           'last_shared', (select max(s.sent_at) from pv_share_log s where s.map_id = m.id),
            'issued', (select count(*) from pv_codes c where c.map_id = m.id),
            'used',   (select count(*) from pv_codes c where c.map_id = m.id and c.used_at is not null),
            'votes',  v.n, 'lots', v.lots,
@@ -439,6 +472,7 @@ begin
   else ch := null; end if;
   select * into cur from pv_votes where map_id = m.id and parcel_id = pid and member = c.member;
   had := found;
+  if m.closed_at is not null then return pv_err('closed'); end if;
   if had and (m.kind = 'question' or cur.choice = ch) then return jsonb_build_object('ok', true); end if;
   if m.kind = 'land_bank' then
     lim := coalesce((m.budgets ->> ch)::int, 0);
@@ -473,6 +507,7 @@ begin
     perform pv_note('miss'); return pv_err('not_member');
   end if;
   if not exists (select 1 from pv_maps where id = c.map_id and leader_member = c.member) then return pv_err('not_leader'); end if;
+  if exists (select 1 from pv_maps where id = c.map_id and closed_at is not null) then return pv_err('closed'); end if;
   if length(nt) > 80 then return pv_err('bad_note'); end if;
   update pv_votes set note = nt where map_id = c.map_id and parcel_id = pv_norm(p_parcel) and member = c.member;
   if not found then return pv_err('no_vote'); end if;
@@ -489,6 +524,7 @@ begin
     perform pv_note('miss'); return pv_err('not_member');
   end if;
   perform pg_advisory_xact_lock(hashtext('pv-member:' || c.map_id || ':' || c.member));
+  if exists (select 1 from pv_maps where id = c.map_id and closed_at is not null) then return pv_err('closed'); end if;
   delete from pv_votes where map_id = c.map_id and parcel_id = pid and member = c.member returning choice into ch;
   if found then insert into pv_history (map_id, parcel_id, member, action, choice) values (c.map_id, pid, c.member, 'take back', ch); end if;
   return jsonb_build_object('ok', true);
@@ -518,7 +554,8 @@ $$;
 create or replace function pv_lot_maps(p_parcel text) returns jsonb   -- every map with votes on this lot, with votes per answer on land bank maps
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'kind', m.kind, 'question', m.question, 'steward', m.steward, 'votes', t.n,
-           'by', case when m.kind = 'land_bank' then pv_by(t.o, t.d, t.y) end) order by t.n desc, m.created_at), '[]')
+           'by', case when m.kind = 'land_bank' then pv_by(t.o, t.d, t.y) end, 'leader', m.leader, 'closed_at', m.closed_at,
+           'shared', exists (select 1 from pv_share_log s where s.map_id = m.id)) order by t.n desc, m.created_at), '[]')
   from (select map_id, count(*) n, count(*) filter (where choice = 'open_space') o, count(*) filter (where choice = 'development') d,
                count(*) filter (where choice = 'yard_expansion') y
         from pv_votes where parcel_id = pv_norm(p_parcel) group by map_id) t join pv_maps m on m.id = t.map_id
@@ -540,6 +577,131 @@ language sql stable security definer set search_path = public as $$
   from pv_votes v join pv_maps m on m.id = v.map_id left join pv_codes c on c.map_id = v.map_id and c.member = v.member
   where p_map is null or v.map_id = p_map
 $$;
+
+-- Every lot with a vote on any map: [[parcel, maps with votes on it, open space, development, yard expansion], ...].
+-- The three answers are summed over land bank maps only (their answers are fixed, so they add up); question maps
+-- count toward the number of maps but not toward the answers. The home page's map of the whole record.
+create or replace function pv_all_lots() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_array(t.parcel_id, t.maps, t.o, t.d, t.y)), '[]')
+  from (select v.parcel_id, count(distinct v.map_id) maps,
+               count(*) filter (where m.kind = 'land_bank' and v.choice = 'open_space') o,
+               count(*) filter (where m.kind = 'land_bank' and v.choice = 'development') d,
+               count(*) filter (where m.kind = 'land_bank' and v.choice = 'yard_expansion') y
+        from pv_votes v join pv_maps m on m.id = v.map_id group by v.parcel_id) t
+$$;
+
+-- How many maps sent to decision-makers include this lot: it was among the top lots when one was sent, or it has
+-- votes on a map that has been sent.
+create or replace function pv_lot_shared(p_parcel text) returns int
+language sql stable security definer set search_path = public as $$
+  select count(distinct s.map_id)::int from pv_share_log s
+  where s.top_parcels_at_send @> jsonb_build_array(jsonb_build_object('parcel', pv_norm(p_parcel)))
+     or exists (select 1 from pv_votes v where v.map_id = s.map_id and v.parcel_id = pv_norm(p_parcel))
+$$;
+
+-- The lots where a map's members agree most, best first: [{"parcel", "choice", "votes", "total"}, ...].
+-- Agreement is the leading answer's votes (question maps: the votes); more votes in all breaks a tie, then the
+-- parcel number. Lots where two answers tie for the lead are left out: they have no one answer to report.
+create or replace function pv_top_lots(p_map text, p_n int default 3) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object('parcel', x.parcel_id, 'choice', x.choice, 'votes', x.lead, 'total', x.n)
+                            order by x.lead desc, x.n desc, x.parcel_id), '[]')
+  from (select * from (
+          select t.parcel_id, t.n,
+                 case when m.kind = 'land_bank' then greatest(t.o, t.d, t.y) else t.n end lead,
+                 case when m.kind = 'land_bank' then
+                   case greatest(t.o, t.d, t.y) when t.o then 'open_space' when t.d then 'development' else 'yard_expansion' end end choice,
+                 m.kind = 'land_bank' and ((t.o = greatest(t.o, t.d, t.y))::int + (t.d = greatest(t.o, t.d, t.y))::int + (t.y = greatest(t.o, t.d, t.y))::int) > 1 tie
+          from pv_maps m,
+               lateral (select parcel_id, count(*) n, count(*) filter (where choice = 'open_space') o,
+                               count(*) filter (where choice = 'development') d, count(*) filter (where choice = 'yard_expansion') y
+                        from pv_votes where map_id = m.id group by parcel_id) t
+          where m.id = p_map) z
+        where not z.tie
+        order by z.lead desc, z.n desc, z.parcel_id
+        limit greatest(0, least(coalesce(p_n, 3), 20))) x
+$$;
+
+
+-- ------------------------------------------- sharing, closing, deleting
+-- All three take the map's leader code, checked here, never only in the page.
+
+-- The record of a map being sent to decision-makers, newest first.
+create or replace function pv_shares(p_map text) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', s.id, 'sent_at', s.sent_at, 'recipients', s.recipients, 'voters', s.voters_at_send,
+           'members', s.members_at_send, 'top', s.top_parcels_at_send) order by s.sent_at desc, s.id desc), '[]')
+  from pv_share_log s where s.map_id = p_map
+$$;
+
+-- A leader code's map, or null (wrong codes count toward the rate limit).
+create or replace function pv_leader_map(p_code text) returns pv_maps
+language plpgsql security definer set search_path = public as $$
+declare c pv_codes; m pv_maps;
+begin
+  if pv_over('miss', 30, interval '10 minutes') then raise exception 'too_many_attempts'; end if;
+  select * into c from pv_codes where code = pv_norm(p_code);
+  if found then select * into m from pv_maps where id = c.map_id and leader_member = c.member; end if;
+  if m.id is null then perform pv_note('miss'); end if;
+  return m;
+end $$;
+
+-- The leader confirms they sent the map. p_recipients: [{"office": "...", "name": "..."}], public officials only.
+-- Only the office and name are kept (anything else, an email included, is dropped). Turnout and the top lots are
+-- read here, at the moment of the entry, not taken from the page.
+create or replace function pv_share(p_code text, p_recipients jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m pv_maps; r jsonb; rs jsonb := '[]'; o text; nm text; e pv_share_log;
+begin
+  m := pv_leader_map(p_code);
+  if m.id is null then return pv_err('not_leader'); end if;
+  if jsonb_typeof(p_recipients) is distinct from 'array' or jsonb_array_length(p_recipients) not between 1 and 20 then return pv_err('bad_recipients'); end if;
+  for r in select * from jsonb_array_elements(p_recipients) loop
+    if jsonb_typeof(r) <> 'object' then return pv_err('bad_recipients'); end if;
+    o := nullif(trim(coalesce(r ->> 'office', '')), ''); nm := nullif(trim(coalesce(r ->> 'name', '')), '');
+    if o is null or length(o) > 120 or length(nm) > 100 or o ~ '@' or nm ~ '@' then return pv_err('bad_recipients'); end if;
+    rs := rs || jsonb_build_array(case when nm is null then jsonb_build_object('office', o) else jsonb_build_object('office', o, 'name', nm) end);
+  end loop;
+  perform pg_advisory_xact_lock(hashtext('pv-share:' || m.id));
+  if (select count(*) from pv_share_log where map_id = m.id and sent_at > now() - interval '1 day') >= 10 then return pv_err('too_many_shares'); end if;
+  insert into pv_share_log (map_id, recipients, voters_at_send, members_at_send, top_parcels_at_send)
+    values (m.id, rs, (select count(*) from pv_codes where map_id = m.id and used_at is not null),
+            (select count(*) from pv_codes where map_id = m.id), pv_top_lots(m.id, 3))
+    returning * into e;
+  return jsonb_build_object('id', e.id, 'sent_at', e.sent_at, 'recipients', e.recipients, 'voters', e.voters_at_send,
+                            'members', e.members_at_send, 'top', e.top_parcels_at_send);
+exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
+end $$;
+
+-- The leader closes voting for good. Votes, the map, and its share log stay public.
+create or replace function pv_close_map(p_code text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m pv_maps; t timestamptz;
+begin
+  m := pv_leader_map(p_code);
+  if m.id is null then return pv_err('not_leader'); end if;
+  update pv_maps set closed_at = coalesce(closed_at, now()) where id = m.id returning closed_at into t;
+  return jsonb_build_object('ok', true, 'closed_at', t);
+exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
+end $$;
+
+-- The leader deletes a map that was never sent to decision-makers (tests, demos): the map, its codes, its votes,
+-- and their history. p_confirm must be the map's question, as a check that it's the right map.
+create or replace function pv_delete_map(p_code text, p_confirm text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m pv_maps;
+begin
+  m := pv_leader_map(p_code);
+  if m.id is null then return pv_err('not_leader'); end if;
+  perform pg_advisory_xact_lock(hashtext('pv-share:' || m.id));
+  if exists (select 1 from pv_share_log where map_id = m.id) then return pv_err('shared'); end if;
+  if pv_norm_key(p_confirm) is distinct from pv_norm_key(m.question) then return pv_err('bad_confirm'); end if;
+  delete from pv_history where map_id = m.id;
+  delete from pv_maps where id = m.id;   -- codes go with it, and votes with the codes
+  return jsonb_build_object('ok', true);
+exception when others then if sqlerrm = 'too_many_attempts' then return pv_err('too_many_attempts'); end if; raise;
+end $$;
 
 
 -- ------------------------------------------------------ syncing with the city
@@ -642,13 +804,14 @@ alter table pv_codes    enable row level security;
 alter table pv_votes    enable row level security;
 alter table pv_history  enable row level security;
 alter table pv_attempts enable row level security;
+alter table pv_share_log enable row level security;
 
--- The lots, the votes, their history, and the sync status are open to everyone. Maps are read through
+-- The lots, the votes, their history, the share log, and the sync status are open to everyone. Maps are read through
 -- pv_list_maps / pv_get_map (so the steward key's hash never leaves). Codes and attempts are private.
 do $$
 declare t text;
 begin
-  foreach t in array array['pv_parcels', 'pv_sync', 'pv_votes', 'pv_history'] loop
+  foreach t in array array['pv_parcels', 'pv_sync', 'pv_votes', 'pv_history', 'pv_share_log'] loop
     execute format('drop policy if exists "Anyone can read" on %I', t);
     execute format('create policy "Anyone can read" on %I for select using (true)', t);
     execute format('revoke all on %I from anon, authenticated', t);
@@ -681,6 +844,13 @@ grant execute on function pv_tally(text)                                  to ano
 grant execute on function pv_mine(text)                                   to anon, authenticated;
 grant execute on function pv_lot_maps(text)                               to anon, authenticated;
 grant execute on function pv_record(text)                                 to anon, authenticated;
+grant execute on function pv_all_lots()                                   to anon, authenticated;
+grant execute on function pv_lot_shared(text)                             to anon, authenticated;
+grant execute on function pv_top_lots(text, int)                          to anon, authenticated;
+grant execute on function pv_shares(text)                                 to anon, authenticated;
+grant execute on function pv_share(text, jsonb)                           to anon, authenticated;
+grant execute on function pv_close_map(text)                              to anon, authenticated;
+grant execute on function pv_delete_map(text, text)                       to anon, authenticated;
 
 
 -- ------------------------------------- retiring the Land Bank Program Vote
